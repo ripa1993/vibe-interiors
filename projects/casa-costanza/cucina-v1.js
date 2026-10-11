@@ -2,9 +2,9 @@
 //
 // Linea ovest (lungo il muro con gli attacchi), da sud a nord:
 //   mobile ad angolo (con il tratto trasversale che si salda alla penisola) · colonna FORNELLO (piano a induzione + forno, cappa integrata
-//   nel pensile) · frigo INCASSATO (ante bianche a filo, gole, cappello a 250 cm) · lavastoviglie MINI da 45 · anta stretta ·
-//   mobile ad angolo a pentagono con anta diagonale, con il LAVELLO ANGOLARE a pentagono sotto la finestra.
-// Parete nord (quella dello scaldabagno): mobile a cassetti da 45 e mobile da 40 sotto la caldaia (altezza standard, piano a 94).
+//   nel pensile) · frigo INCASSATO (ante bianche a filo, gole, cappello a 250 cm) · lavastoviglie da 60 · mobile LAVELLO diritto
+//   (60 x 91) con il lavello rettangolare (vasca + gocciolatoio) sotto la finestra e il rubinetto contro il muro ovest: come nella cucina v2.
+// Parete nord (quella dello scaldabagno): niente mobili: parete LIBERA da x -109 al divisorio, sotto la caldaia, con la griglia di aerazione del gas in vista.
 // Pensili alti (da 145 a 250 cm), chiusi, a filo, a tratti; sopra il lavello, mensole A GIORNO a gradini, con pianta a triangolo /
 //   trapezio che sfumano nel muro. Rivestimento in pietra tra piano e pensili, come nella cucina attuale.
 // Un elettrodomestico appoggiato (non incassato) sul piano d'angolo: macchina caffe' a cialde, sotto il pensile a sinistra della cappa e ruotata di 45° verso chi la usa. Microonde e friggitrice ad aria sono
@@ -52,7 +52,6 @@ module.exports = function cucinaV1({ box: _box, tube: _tube, rbox: _rbox, slab: 
 
     // ---------- mobili bassi, linea ovest (profondita' 60, piano a 90), da y n-241 a n-6 ----------
     box(P + 'Base_Corpo_Fornello', WH, -171, n - 302, 10, -112, n - 212, 90);               // colonna fornello (90), subito dopo l'angolo
-    box(P + 'Base_Corpo_Resto', WH, -171, n - 150, 10, -112, n - 81, 90);                    // dopo il frigo; il tratto n-81..n-6 e' il mobile ad angolo (pentagono)
     SHY = -61;                                                          // colonna fornello: da y n-241..n-151 a n-302..n-212
     // sotto il piano cottura: FORNO da incasso (60 x 60, centrato su y = n-196), cassetto basso e fianchi (n-241..n-151)
     const GLASS = [28, 30, 34, 255];
@@ -68,61 +67,33 @@ module.exports = function cucinaV1({ box: _box, tube: _tube, rbox: _rbox, slab: 
     box(P + 'Forno_Cassetto', WH, -112, n - 226, 12, -110, n - 166, 29);
     tube(P + 'Forno_Cassetto_Maniglia', ST, [[-108.8, n - 206, 24], [-108.8, n - 186, 24]], [0.8, 0.8]);
     SHY = 0;
-    // tratto ovest verso l'angolo: un cassetto (n-150..n-102) e un'anta sotto il lavello (n-101..n-66)
-    // LAVASTOVIGLIE MINI da 45 sulla parete ovest, subito a destra (nord) del frigo (n-150..n-105); fronte verso il corridoio di lavoro
-    box(P + 'Lavastoviglie_Sportello', ST, -112, n - 149.5, 12, -110, n - 105.5, 78);
-    box(P + 'Lavastoviglie_Comandi', BLK, -112, n - 149.5, 79, -110, n - 105.5, 88);
-    tube(P + 'Lavastoviglie_Maniglia', ST, [[-108.4, n - 143, 70], [-108.4, n - 112, 70]], [0.9, 0.9], 10);
-    // anta stretta (22 cm) fino al mobile ad angolo
-    box(P + 'Lavello_Anta_Ovest', WH, -112, n - 104.5, 12, -110, n - 82.5, 88);
-    tube(P + 'Lavello_Maniglia_Ovest', ST, [[-108.8, n - 87, 58], [-108.8, n - 87, 80]], [0.8, 0.8]);
-    // MOBILE AD ANGOLO: pianta a pentagono (bracci da 75 cm lungo le due pareti, smusso a 45° verso il corridoio) con anta diagonale;
-    // e' il vano sotto il lavello: da qui si accede anche al contatore del gas, dietro in nicchia
-    slab(P + 'Angolo_Lavello_Corpo', WH, [[-171, n - 6], [-96, n - 6], [-96, n - 66], [-111, n - 81], [-171, n - 81]].reverse(), 10, 90);
-    slab(P + 'Angolo_Lavello_Anta', WH, [[-96, n - 66], [-111, n - 81], [-109.6, n - 82.4], [-94.6, n - 67.4]].reverse(), 12, 88);        // anta diagonale (45°)
-    tube(P + 'Angolo_Lavello_Maniglia', ST, [[-101.2, n - 76.2, 58], [-101.2, n - 76.2, 80]], [0.8, 0.8]);
-    slab(P + 'Zoccolo_Angolo_Diagonale', BLK, [[-171, n - 6], [-101, n - 6], [-101, n - 71], [-171, n - 71]].reverse(), 0, 10);
+    // LAVASTOVIGLIE da 60 (come nella cucina v2), subito a nord del frigo (n-151..n-91), fronte in acciaio verso il corridoio di lavoro
+    box(P + 'Base_Lavastoviglie', WH, -171, n - 151, 10, -114, n - 91, 90);
+    box(P + 'Lavastoviglie_Sportello', ST, -114, n - 150.5, 12, -112, n - 91.5, 78);
+    box(P + 'Lavastoviglie_Comandi', BLK, -114, n - 150.5, 79, -112, n - 91.5, 88);
+    tube(P + 'Lavastoviglie_Maniglia', ST, [[-110.8, n - 143, 70], [-110.8, n - 99, 70]], [0.9, 0.9], 10);
+    // MOBILE LAVELLO (60 x 91, come nella v2): corpo diritto fino alla parete nord, anta sul tratto verso la lavastoviglie, tratto d'angolo cieco
+    box(P + 'Base_Lavello', WH, -171, n - 91, 10, -112, n - 6, 90);
+    box(P + 'Lavello_Anta_Ovest', WH, -112, n - 90.5, 12, -110, n - 48.5, 88);
+    tube(P + 'Lavello_Maniglia_Ovest', ST, [[-108.8, n - 52, 58], [-108.8, n - 52, 82]], [0.8, 0.8], 8);
 
     // ---------- parete NORD (quella dello scaldabagno): mobile a cassetti e mobile basso sotto la caldaia ----------
-    box(P + 'Zoccolo_Nord', BLK, -96, n - 61, 0, -11, n - 6, 10);
-    // ELEMENTO A GIORNO (45 x 60, senza schienale ne' ante): il vano basso (z 12..52) resta libero davanti alla griglia di aerazione del gas (x -101..-81, z 15..37)
-    box(P + 'Nord_Giorno_Fianco_Ovest', WH, -96, n - 66, 10, -94, n, 90);
-    box(P + 'Nord_Giorno_Fianco_Est', WH, -53, n - 66, 10, -51, n, 90);
-    box(P + 'Nord_Giorno_Fondo', WH, -94, n - 66, 10, -53, n - 6, 12);
-    box(P + 'Nord_Giorno_Cielo', WH, -94, n - 66, 88, -53, n, 90);
-    rbox(P + 'Nord_Giorno_Ripiano', OAK, [-94, n - 65, 52, -53, n - 2, 54.5], 1, 0.5);
-    box(P + 'Nord_Giorno_Libro_0', [150, 50, 50, 255], -92, n - 40, 54.5, -73, n - 32, 70);
-    box(P + 'Nord_Giorno_Libro_1', [60, 90, 140, 255], -92, n - 31, 54.5, -73, n - 23, 66);
-    rbox(P + 'Nord_Giorno_Cesto', [196, 170, 120, 255], [-70, n - 46, 54.5, -57, n - 18, 70], 5, 2, 2);
-    box(P + 'Nord_Mobile_Corpo', WH, -51, n - 66, 10, -11, n - 6, 90);                  // mobile (40 x 60 x 90) sotto lo scaldabagno
-    box(P + 'Nord_Mobile_Anta', WH, -50, n - 68, 12, -12, n - 66, 88);
-    tube(P + 'Nord_Mobile_Maniglia', ST, [[-17, n - 69.2, 48], [-17, n - 69.2, 78]], [0.8, 0.8]);
     // piano di lavoro (ardesia) in due pezzi: angolo+trasversale (in fondo, con la penisola) e linea (n-241..n-6); paraschizzi in pietra
     // piano in ardesia: linea ovest + angolo smussato + lavastoviglie mini (profilo unico, sbalzo 1,5 cm)
-    slab(P + 'Piano_Lavoro', DK, [[-171, n - 6], [-11, n - 6], [-11, n - 67.5], [-94.5, n - 67.5], [-108.5, n - 81.5], [-108.5, n - 150], [-171, n - 150]].reverse(), 90, 94);
+    slab(P + 'Piano_Lavoro', DK, [[-171, n - 151], [-109, n - 151], [-109, n - 6], [-171, n - 6]], 90, 94);                    // linea ovest (lavastoviglie + lavello)
+    // dal lavello (x -109) al divisorio (x -11) la parete nord e' libera: niente mobili ne' piano, resta in vista la griglia di aerazione del gas
     rbox(P + 'Piano_Fornello', DK, [-171, n - 302, 90, -109, n - 212, 94], 1.5, 0.8);                // sopra la colonna fornello
     box(P + 'Paraschizzi_Fornello', STONE, -171, n - 302, 94, -169, n - 212, 145);
     box(P + 'Paraschizzi_Pietra', STONE, -171, n - 150, 94, -169, n - 6, 145);
     box(P + 'Paraschizzi_Angolo', STONE, -171, n - 362, 94, -169, n - 302, 145);
 
-    // lavello ANGOLARE a pentagono (fronte tagliato a 45°, come nella foto di riferimento), in graniglia greige, con due vasche
-    // separate da un divisorio che parte dall'angolo, due scarichi e il rubinetto alto nell'angolo in fondo.
-    // Coordinate (u, v): u lungo la parete nord da x -168, v lungo la parete ovest verso sud da y n-8.
-    const uv = (u, v) => [-168 + u, n - 8 - v];
-    const SH = 26;                                                                             // il lavello e' avanzato di 26 cm lungo la diagonale, verso il bordo smussato (dove sta chi lo usa)
-    const poly = pts => pts.map(([u, v]) => uv(u + SH, v + SH)).reverse();                               // inverso = senso antiorario in pianta
-    const SINK = [170, 162, 150, 255], BOWL = [140, 132, 122, 255];
-    slab(P + 'Lavello_Piano', SINK, poly([[0, 0], [54, 0], [54, 14], [14, 54], [0, 54]]), 94, 94.5);
-    slab(P + 'Lavello_Vasca_Nord', BOWL, poly([[8, 3], [51, 3], [51, 14], [33, 32], [11, 10]]), 94.5, 95);
-    slab(P + 'Lavello_Vasca_Ovest', BOWL, poly([[3, 8], [3, 51], [14, 51], [32, 33], [10, 11]]), 94.5, 95);
-    for (const [k, u, v] of [[0, 34, 12], [1, 12, 34]]) {
-      const [x, y] = uv(u + SH, v + SH);
-      tube(P + 'Lavello_Scarico_' + k, [196, 198, 204, 255], [[x, y, 95], [x, y, 95.4]], [2.4, 2.4], 14);
-    }
-    {
-      const q = [[20, 20, 94.5], [20, 20, 121], [21, 21, 127], [24, 24, 130], [30, 30, 130], [35, 35, 125]];      // rubinetto dietro il lavello, collo di cigno verso il fronte diagonale
-      tube(P + 'Lavello_Rubinetto', ST, q.map(([u, v, z]) => [...uv(u, v), z]), q.map(() => 1.4), 10);
-    }
+    // lavello d'angolo sotto la finestra, come nella v2: vasca singola + gocciolatoio verso nord, rubinetto a collo di cigno contro il muro OVEST, dietro la vasca
+    slab(P + 'Lavello_Piano', ST, [[-167, n - 84], [-115, n - 84], [-115, n - 12], [-167, n - 12]], 94, 94.5);
+    slab(P + 'Lavello_Vasca', [150, 154, 160, 255], [[-163, n - 80], [-119, n - 80], [-119, n - 44], [-163, n - 44]], 94.5, 95);
+    for (let k = 0; k < 6; k++)                                                          // scanalature del gocciolatoio
+      box(P + 'Lavello_Scanalatura_' + k, [128, 132, 138, 255], -164 + k * 7.2, n - 38, 94.5, -162 + k * 7.2, n - 16, 94.8);
+    tube(P + 'Lavello_Scarico', [196, 198, 204, 255], [[-141, n - 62, 95], [-141, n - 62, 95.4]], [2.4, 2.4], 14);
+    tube(P + 'Lavello_Rubinetto', ST, [[-166, n - 62, 94.5], [-166, n - 62, 120], [-163, n - 62, 128], [-156, n - 62, 131], [-149, n - 62, 126]], [1.4, 1.4, 1.4, 1.4, 1.4], 10);
 
     SHY = -61;
     // piano cottura a induzione + cappa (centro y = n-196)
