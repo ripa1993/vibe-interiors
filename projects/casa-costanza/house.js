@@ -32,6 +32,7 @@ defGroup('cucina-v1', 'Cucina v1 · penisola colazione', 'Cucina', 'cucina');   
 defGroup('soggiorno-divano', 'Soggiorno · divano ad L + tappeto + lampada', 'Soggiorno', 'divano');
 defGroup('divano-v1', 'Soggiorno · divano Cavarelli lineare', 'Soggiorno', 'divano');
 defGroup('divano-v2', 'Soggiorno · divano letto IKEA Barsloev con chaise, di fronte alla TV', 'Soggiorno', 'divano');   // i due divani sono varianti: uno esclude l'altro
+defGroup('tavolo', 'Soggiorno · tavolo allungabile + 4 sedie', 'Soggiorno');
 defGroup('soggiorno-libreria', 'Soggiorno · libreria a mensole nella nicchia', 'Soggiorno');
 defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno');
 defGroup('cucina-v2', 'Cucina v2 · linea ovest + penisola stretta', 'Cucina', 'cucina');
@@ -355,6 +356,7 @@ require('./soggiorno-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./libreria-nicchia.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./tavolo.js')({ box, tube, rbox, slab, group, n: yT0 });
 
 // ---------- scena ----------
 const scene = {
