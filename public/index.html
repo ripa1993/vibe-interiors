@@ -21,6 +21,7 @@
   #views button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
   #gbtn { display: none; }
   #gbtn.has { display: inline-block; }
+  #gbtn.open:not(.on) { border-color: #1f6feb; color: #1f6feb; }       /* panel open, no group on: blue; groups on: orange (button.on) */
   #groups { position: fixed; left: 10px; bottom: 10px; z-index: 5; display: none; max-height: 62vh; overflow: auto; min-width: 210px;
             background: rgba(255,255,255,.95); border: 1px solid #d5d8de; border-radius: 8px; padding: 8px 10px; }
   #groups.open { display: block; }
@@ -500,7 +501,7 @@ function renderGroups(data) {
   }
   groupsEl.appendChild(acts);
 }
-gbtn.onclick = () => groupsEl.classList.toggle('open');
+gbtn.onclick = () => gbtn.classList.toggle('open', groupsEl.classList.toggle('open'));
 
 // scene reloads rebuild the meshes, so re-apply the selection and dimensions afterwards
 const _load = load;

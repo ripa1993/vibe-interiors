@@ -1,0 +1,227 @@
+// Cucina v1 · "Penisola colazione" — pensata per lo STATO FINALE (divisorio COT/soggiorno e muro basso della COT rimossi).
+//
+// Linea ovest (lungo il muro con gli attacchi), da sud a nord:
+//   mobile ad angolo (con il tratto trasversale che si salda alla penisola) · colonna FORNELLO (piano a induzione + forno, cappa integrata
+//   nel pensile) · frigo INCASSATO (ante bianche a filo, gole, cappello a 250 cm) · lavastoviglie MINI da 45 · anta stretta ·
+//   mobile ad angolo a pentagono con anta diagonale, con il LAVELLO ANGOLARE a pentagono sotto la finestra.
+// Parete nord (quella dello scaldabagno): mobile a cassetti da 45 e mobile basso da 40 sotto la caldaia.
+// Pensili alti (da 145 a 250 cm), chiusi, a filo, a tratti; sopra il lavello, mensole A GIORNO a gradini, con pianta a triangolo /
+//   trapezio che sfumano nel muro. Rivestimento in pietra tra piano e pensili, come nella cucina attuale.
+// Un elettrodomestico appoggiato (non incassato) sul piano d'angolo: macchina caffe' a cialde, sotto il pensile a sinistra della cappa e ruotata di 45° verso chi la usa. Microonde e friggitrice ad aria sono
+//   stati tolti e salvati in elettrodomestici-extra.js.
+// PENISOLA: bancone in rovere profondo 35 cm (x -13..22), VUOTO SOTTO, su gambe d'acciaio, agganciato al trasversale; due sgabelli
+//   infilati sotto il piano e due sospensioni, per la colazione in due. La cucina si apre solo a nord, con ~100 cm di passaggio.
+//
+// Tutte le misure sono in cm, stime di progetto (non rilievi). `n` e' la y del muro nord interno della COT.
+module.exports = function cucinaV1({ box: _box, tube: _tube, rbox: _rbox, slab: _slab, group, n }) {
+  // SHY sposta in y tutto cio' che viene disegnato mentre e' diverso da 0 (serve per scambiare le colonne frigo / fornello)
+  let SHY = 0;
+  const box = (nm, c, x0, y0, z0, x1, y1, z1) => _box(nm, c, x0, y0 + SHY, z0, x1, y1 + SHY, z1);
+  const tube = (nm, c, p, r, seg) => _tube(nm, c, p.map(q => [q[0], q[1] + SHY, q[2]]), r, seg);
+  const rbox = (nm, c, b, r, top, bot) => _rbox(nm, c, [b[0], b[1] + SHY, b[2], b[3], b[4] + SHY, b[5]], r, top, bot);
+  const slab = (nm, c, poly, z0, z1) => _slab(nm, c, poly.map(([x, y]) => [x, y + SHY]), z0, z1);
+
+  const WH = [236, 233, 226, 255];       // laccato bianco caldo
+  const DK = [58, 60, 64, 255];          // ardesia scura (piano di lavoro)
+  const OAK = [196, 158, 108, 255];      // rovere
+  const ST = [188, 191, 196, 255];       // acciaio
+  const BLK = [40, 42, 46, 255];         // nero opaco
+  const STONE = [112, 114, 120, 255];    // pietra a spacco
+  const P = '/CucinaV1/';
+
+  group('cucina-v1', () => {
+    // ---------- zoccoli (rientrati di 5 cm) ----------
+    box(P + 'Zoccolo_Linea', BLK, -171, n - 357, 0, -116, n - 6, 10);                      // angolo, frigo e linea
+
+    // ---------- mobile ad angolo (60 x 60): si salda al trasversale della penisola ----------
+    box(P + 'Angolo_Corpo', WH, -171, n - 362, 10, -112, n - 302, 90);
+
+    SHY = 91;                                                           // la colonna frigo passa da y n-302..n-242 a n-211..n-151 (scambio con il fornello)
+    // ---------- frigorifero INCASSATO (colonna 60 x 60): ante bianche a filo con i frontali, maniglie a gola, cappello a 250 cm ----------
+    // porta libera sul corridoio di lavoro: gole a sud = cerniere a nord
+    box(P + 'Frigo_Colonna', WH, -171, n - 302, 10, -112, n - 242, 200);
+    box(P + 'Frigo_Anta_Congelatore', WH, -112, n - 301.5, 12, -110, n - 242.5, 100);
+    box(P + 'Frigo_Anta_Frigorifero', WH, -112, n - 301.5, 101.5, -110, n - 242.5, 199);
+    box(P + 'Frigo_Gola_Congelatore', BLK, -112, n - 301.5, 22, -109.8, n - 300.5, 92);
+    box(P + 'Frigo_Gola_Frigorifero', BLK, -112, n - 301.5, 110, -109.8, n - 300.5, 190);
+    box(P + 'Frigo_Cappello_Corpo', WH, -171, n - 302, 201, -112, n - 242, 250);
+    box(P + 'Frigo_Cappello_Anta', WH, -112, n - 301.5, 202, -110, n - 242.5, 249);
+    box(P + 'Frigo_Cappello_Gola', BLK, -112, n - 301.5, 207, -109.8, n - 300.5, 241);
+
+    SHY = 0;
+
+    // ---------- mobili bassi, linea ovest (profondita' 60, piano a 90), da y n-241 a n-6 ----------
+    box(P + 'Base_Corpo_Fornello', WH, -171, n - 302, 10, -112, n - 212, 90);               // colonna fornello (90), subito dopo l'angolo
+    box(P + 'Base_Corpo_Resto', WH, -171, n - 150, 10, -112, n - 81, 90);                    // dopo il frigo; il tratto n-81..n-6 e' il mobile ad angolo (pentagono)
+    SHY = -61;                                                          // colonna fornello: da y n-241..n-151 a n-302..n-212
+    // sotto il piano cottura: FORNO da incasso (60 x 60, centrato su y = n-196), cassetto basso e fianchi (n-241..n-151)
+    const GLASS = [28, 30, 34, 255];
+    box(P + 'Forno_Fianco_Sud', WH, -112, n - 240, 12, -110, n - 226.5, 88);
+    box(P + 'Forno_Fianco_Nord', WH, -112, n - 165.5, 12, -110, n - 152, 88);
+    box(P + 'Forno_Comandi', ST, -112, n - 226, 76, -110, n - 166, 88);                  // mostrina comandi
+    for (let k = 0; k < 3; k++) {                                                          // 3 manopole
+      const y = n - 214 + k * 18;
+      tube(P + 'Forno_Manopola_' + k, BLK, [[-110, y, 82], [-107, y, 82]], [1.8, 1.8], 12);
+    }
+    box(P + 'Forno_Sportello', GLASS, -112, n - 226, 30, -110, n - 166, 75);             // sportello in vetro nero
+    tube(P + 'Forno_Maniglia', ST, [[-108.2, n - 222, 70], [-108.2, n - 170, 70]], [0.9, 0.9], 10);
+    box(P + 'Forno_Cassetto', WH, -112, n - 226, 12, -110, n - 166, 29);
+    tube(P + 'Forno_Cassetto_Maniglia', ST, [[-108.8, n - 206, 24], [-108.8, n - 186, 24]], [0.8, 0.8]);
+    SHY = 0;
+    // tratto ovest verso l'angolo: un cassetto (n-150..n-102) e un'anta sotto il lavello (n-101..n-66)
+    // LAVASTOVIGLIE MINI da 45 sulla parete ovest, subito a destra (nord) del frigo (n-150..n-105); fronte verso il corridoio di lavoro
+    box(P + 'Lavastoviglie_Sportello', ST, -112, n - 149.5, 12, -110, n - 105.5, 78);
+    box(P + 'Lavastoviglie_Comandi', BLK, -112, n - 149.5, 79, -110, n - 105.5, 88);
+    tube(P + 'Lavastoviglie_Maniglia', ST, [[-108.4, n - 143, 70], [-108.4, n - 112, 70]], [0.9, 0.9], 10);
+    // anta stretta (22 cm) fino al mobile ad angolo
+    box(P + 'Lavello_Anta_Ovest', WH, -112, n - 104.5, 12, -110, n - 82.5, 88);
+    tube(P + 'Lavello_Maniglia_Ovest', ST, [[-108.8, n - 87, 58], [-108.8, n - 87, 80]], [0.8, 0.8]);
+    // MOBILE AD ANGOLO: pianta a pentagono (bracci da 75 cm lungo le due pareti, smusso a 45° verso il corridoio) con anta diagonale;
+    // e' il vano sotto il lavello: da qui si accede anche al contatore del gas, dietro in nicchia
+    slab(P + 'Angolo_Lavello_Corpo', WH, [[-171, n - 6], [-96, n - 6], [-96, n - 66], [-111, n - 81], [-171, n - 81]].reverse(), 10, 90);
+    slab(P + 'Angolo_Lavello_Anta', WH, [[-96, n - 66], [-111, n - 81], [-109.6, n - 82.4], [-94.6, n - 67.4]].reverse(), 12, 88);        // anta diagonale (45°)
+    tube(P + 'Angolo_Lavello_Maniglia', ST, [[-101.2, n - 76.2, 58], [-101.2, n - 76.2, 80]], [0.8, 0.8]);
+    slab(P + 'Zoccolo_Angolo_Diagonale', BLK, [[-171, n - 6], [-101, n - 6], [-101, n - 71], [-171, n - 71]].reverse(), 0, 10);
+
+    // ---------- parete NORD (quella dello scaldabagno): mobile a cassetti e mobile basso sotto la caldaia ----------
+    box(P + 'Zoccolo_Nord', BLK, -96, n - 61, 0, -11, n - 6, 10);
+    box(P + 'Nord_Corpo_Cassetti', WH, -96, n - 66, 10, -51, n - 6, 90);                    // mobile a cassetti da 45, a sinistra di quello sotto la caldaia
+    for (let k = 0; k < 2; k++) {
+      const z0 = k === 0 ? 12 : 50, z1 = k === 0 ? 49 : 88;
+      box(P + 'Nord_Cassetto_' + k, WH, -95, n - 68, z0, -52, n - 66, z1);
+      tube(P + 'Nord_Cassetto_Maniglia_' + k, ST, [[-85, n - 69.2, z1 - 5], [-62, n - 69.2, z1 - 5]], [0.8, 0.8]);
+    }
+    box(P + 'Nord_Mobile_Corpo', WH, -51, n - 66, 10, -11, n - 6, 77);                  // mobile basso (40 x 60 x 80) sotto lo scaldabagno
+    box(P + 'Nord_Mobile_Anta', WH, -50, n - 68, 12, -12, n - 66, 76);
+    tube(P + 'Nord_Mobile_Maniglia', ST, [[-17, n - 69.2, 40], [-17, n - 69.2, 66]], [0.8, 0.8]);
+    rbox(P + 'Nord_Mobile_Piano', OAK, [-51, n - 68, 77, -11, n - 6, 80], 2, 1);
+    // piano di lavoro (ardesia) in due pezzi: angolo+trasversale (in fondo, con la penisola) e linea (n-241..n-6); paraschizzi in pietra
+    // piano in ardesia: linea ovest + angolo smussato + lavastoviglie mini (profilo unico, sbalzo 1,5 cm)
+    slab(P + 'Piano_Lavoro', DK, [[-171, n - 6], [-51, n - 6], [-51, n - 67.5], [-94.5, n - 67.5], [-108.5, n - 81.5], [-108.5, n - 150], [-171, n - 150]].reverse(), 90, 94);
+    rbox(P + 'Piano_Fornello', DK, [-171, n - 302, 90, -109, n - 212, 94], 1.5, 0.8);                // sopra la colonna fornello
+    box(P + 'Paraschizzi_Fornello', STONE, -171, n - 302, 94, -169, n - 212, 145);
+    box(P + 'Paraschizzi_Pietra', STONE, -171, n - 150, 94, -169, n - 6, 145);
+    box(P + 'Paraschizzi_Angolo', STONE, -171, n - 362, 94, -169, n - 302, 145);
+
+    // lavello ANGOLARE a pentagono (fronte tagliato a 45°, come nella foto di riferimento), in graniglia greige, con due vasche
+    // separate da un divisorio che parte dall'angolo, due scarichi e il rubinetto alto nell'angolo in fondo.
+    // Coordinate (u, v): u lungo la parete nord da x -168, v lungo la parete ovest verso sud da y n-8.
+    const uv = (u, v) => [-168 + u, n - 8 - v];
+    const SH = 26;                                                                             // il lavello e' avanzato di 26 cm lungo la diagonale, verso il bordo smussato (dove sta chi lo usa)
+    const poly = pts => pts.map(([u, v]) => uv(u + SH, v + SH)).reverse();                               // inverso = senso antiorario in pianta
+    const SINK = [170, 162, 150, 255], BOWL = [140, 132, 122, 255];
+    slab(P + 'Lavello_Piano', SINK, poly([[0, 0], [54, 0], [54, 14], [14, 54], [0, 54]]), 94, 94.5);
+    slab(P + 'Lavello_Vasca_Nord', BOWL, poly([[8, 3], [51, 3], [51, 14], [33, 32], [11, 10]]), 94.5, 95);
+    slab(P + 'Lavello_Vasca_Ovest', BOWL, poly([[3, 8], [3, 51], [14, 51], [32, 33], [10, 11]]), 94.5, 95);
+    for (const [k, u, v] of [[0, 34, 12], [1, 12, 34]]) {
+      const [x, y] = uv(u + SH, v + SH);
+      tube(P + 'Lavello_Scarico_' + k, [196, 198, 204, 255], [[x, y, 95], [x, y, 95.4]], [2.4, 2.4], 14);
+    }
+    {
+      const q = [[20, 20, 94.5], [20, 20, 121], [21, 21, 127], [24, 24, 130], [30, 30, 130], [35, 35, 125]];      // rubinetto dietro il lavello, collo di cigno verso il fronte diagonale
+      tube(P + 'Lavello_Rubinetto', ST, q.map(([u, v, z]) => [...uv(u, v), z]), q.map(() => 1.4), 10);
+    }
+
+    SHY = -61;
+    // piano cottura a induzione + cappa (centro y = n-196)
+    box(P + 'Piano_Cottura', BLK, -166, n - 226, 94, -114, n - 166, 94.6);
+    for (const [k, x, y, r] of [[0, -153, n - 213, 7], [1, -153, n - 179, 5.5], [2, -127, n - 213, 5.5], [3, -127, n - 179, 7]]) {
+      tube(P + 'Fuoco_' + k, [96, 98, 106, 255], [[x, y, 94.7], [x, y, 95]], [r, r], 16);
+    }
+    SHY = 0;
+
+    // ---------- pensili alti (profondita' 35, da 145 a 250), chiusi, a filo, a due tratti: sopra il fornello e dopo il frigo ----------
+    // il frigo (colonna 200 + cappello 250) interrompe la fila; cappa INTEGRATA nell'anta a ribalta sopra il fornello
+    box(P + 'Pensili_Corpo_Fornello', WH, -171, n - 302, 145, -137, n - 212, 250);
+    box(P + 'Pensili_Corpo_Dopo_Frigo', WH, -171, n - 150, 145, -137, n - 82, 250);                // si fermano prima dell'angolo: la finestra resta libera
+    box(P + 'Pensile_Sinistro_Corpo', WH, -171, n - 362, 145, -137, n - 302, 250);               // a sinistra della cappa, sopra l'angolo con gli elettrodomestici
+    box(P + 'Pensile_Sinistro_Anta', WH, -137, n - 361.5, 146, -135, n - 302.5, 249);
+    box(P + 'Pensile_Sinistro_Gola', BLK, -137, n - 361.5, 145.2, -134.8, n - 302.5, 146.4);
+    const cols = [[n - 301.5, n - 292.5, 'Fianco_S'], [n - 292, n - 222, 'Cappa'], [n - 221.5, n - 212.5, 'Fianco_N'],
+                  [n - 149.5, n - 116.5, 'Anta0'], [n - 116, n - 82.5, 'Anta1']];
+    for (const [y0, y1, nm] of cols) {
+      const z0 = 146, z1 = 249;
+      if (nm === 'Cappa') {
+        box(P + 'Cappa_Ribalta', ST, -137, y0, z0, -135, y1, 168);                           // ribalta in acciaio (70 cm) sulla cappa
+        box(P + 'Pensili_Anta_Sopra_Cappa', WH, -137, y0, 169, -135, y1, z1);
+      } else {
+        box(P + 'Pensili_Basso_' + nm, WH, -137, y0, z0, -135, y1, z1);
+      }
+      box(P + 'Pensili_Gola_' + nm, BLK, -137, y0, z0 - 0.8, -134.8, y1, z0 + 0.4);
+    }
+
+    // ---------- mensole A GIORNO a gradini sopra il lavello, a nord del pensile dopo il frigo (lato ovest) ----------
+    // pianta a triangolo / trapezio: partono dalla profondita' dei pensili e vanno a sfumare nel muro verso l'angolo; piu' corte salendo
+    {
+      const y0 = n - 82;                                                          // fine del pensile
+      const lv = [[150, n - 14, 35, 0], [178, n - 24, 32, 7], [206, n - 34, 29, 0], [234, n - 44, 26, 6]];     // [z, y finale, profondita' iniziale, profondita' finale]
+      lv.forEach(([z, yf, D, d], i) => {
+        slab(P + 'Mensola_Giorno_' + i, OAK, [[-171, y0], [-171 + D, y0], [-171 + d, yf], [-171, yf]], z, z + 3);
+      });
+      // qualche oggetto, vicino al lato profondo
+      tube(P + 'Mensola_Vaso', [60, 120, 130, 255], [[-156, n - 70, 153], [-156, n - 70, 173]], [5, 5], 14);
+      box(P + 'Mensola_Libro_0', [150, 50, 50, 255], -167, n - 78, 181, -146, n - 72, 199);
+      box(P + 'Mensola_Libro_1', [60, 90, 140, 255], -167, n - 71, 181, -146, n - 66, 193);
+      tube(P + 'Mensola_Vaso_Terracotta', [190, 100, 70, 255], [[-158, n - 74, 209], [-158, n - 74, 217]], [4.5, 4.5], 14);
+      rbox(P + 'Mensola_Pianta', [90, 140, 80, 255], [-164, n - 80, 217, -152, n - 68, 229], 5, 5, 5);
+      rbox(P + 'Mensola_Ciotola', [226, 218, 200, 255], [-165, n - 80, 237, -149, n - 66, 244], 8, 2, 4);
+    }
+
+    // ---------- elettrodomestico appoggiato (non incassato) sul piano d'angolo, fronte a nord ----------
+    // macchina caffe' a cialde 19 x 30 x 34, sotto il pensile a sinistra della cappa, RUOTATA di 45° verso chi la usa (corridoio di lavoro, a nord-est);
+    // con serbatoio dietro, vaschetta davanti e tazza. Pezzi ruotati = poligoni in pianta (nel viewer niente rotazioni)
+    {
+      const cx = -150, cy = n - 340, k = Math.SQRT1_2;
+      const R = (s, t) => [cx + (s + t) * k, cy + (t - s) * k];                       // s = lungo la larghezza (destra), t = in avanti (verso nord-est)
+      const rect = (s0, s1, t0, t1) => [R(s0, t0), R(s1, t0), R(s1, t1), R(s0, t1)];  // antiorario
+      slab(P + 'Caffe_Corpo', [190, 45, 45, 255], rect(-9.5, 9.5, -15, 15), 94, 128);
+      slab(P + 'Caffe_Serbatoio', [200, 222, 242, 150], rect(-7.5, 7.5, -19, -15), 100, 128);
+      slab(P + 'Caffe_Vaschetta', BLK, rect(-7.5, 7.5, 15, 23), 94, 97.5);
+      tube(P + 'Caffe_Erogatore', ST, [[...R(0, 15), 118], [...R(0, 20), 118]], [1.6, 1.6], 10);
+      tube(P + 'Caffe_Tazza', [236, 233, 226, 255], [[...R(0, 19), 97.5], [...R(0, 19), 105.5]], [3.8, 3.8], 14);
+    }
+
+    // ---------- penisola colazione: tratto trasversale (60 cm) + corpo lungo l'ex divisorio ----------
+    box(P + 'Zoccolo_Trasversale', BLK, -106, n - 357, 0, -6, n - 307, 10);
+    box(P + 'Trasversale_Corpo', WH, -111, n - 362, 10, -11, n - 302, 90);          // dal frigo fino al corpo lungo
+    box(P + 'Trasversale_Retro', WH, -109, n - 363, 10, -11, n - 362, 90);            // fianco verso il corridoio
+    for (let k = 0; k < 3; k++) {                                   // 3 cassettoni a tutta larghezza
+      const z0 = 12 + k * 26.5, z1 = z0 + 25;
+      box(P + 'Trasversale_Cassetto_' + k, WH, -110, n - 302, z0, -12, n - 300, z1);
+      tube(P + 'Trasversale_Maniglia_' + k, ST, [[-85, n - 298.8, z1 - 4], [-37, n - 298.8, z1 - 4]], [0.8, 0.8]);
+    }
+    rbox(P + 'Trasversale_Piano', DK, [-171, n - 362, 90, -13, n - 302, 94], 1.5, 0.8);               // angolo + trasversale
+
+    // bancone: solo il piano in rovere (35 x 195 x 5), nessun mobile sotto; appoggiato al fianco est del trasversale e sostenuto da 3 gambe
+    rbox(P + 'Penisola_Piano', OAK, [-13, n - 364.5, 90, 22, n - 169, 95], 3, 1.5);
+    for (const [k, x, y] of [[0, 19, n - 359], [1, 19, n - 175], [2, -8, n - 175]]) {
+      tube(P + 'Penisola_Gamba_' + k, ST, [[x, y, 0], [x, y, 90]], [2.2, 2.2], 12);
+    }
+
+    // due sgabelli (sedile in rovere, gambe in acciaio nero leggermente aperte)
+    for (const [k, y] of [[0, n - 266], [1, n - 206]]) {
+      const x = 24;                                                    // sedile infilato ~15 cm sotto il piano
+      tube(P + 'Sgabello_Sedile_' + k, OAK, [[x, y, 64], [x, y, 68]], [17, 17], 20);
+      for (const [j, sx, sy] of [[0, 1, 1], [1, 1, -1], [2, -1, 1], [3, -1, -1]]) {
+        tube(P + 'Sgabello_Gamba_' + k + '_' + j, BLK, [[x + 13 * sx, y + 13 * sy, 0], [x + 10 * sx, y + 10 * sy, 64]], [1.1, 1.1], 8);
+      }
+      tube(P + 'Sgabello_Anello_' + k, BLK, [[x - 12, y, 26], [x + 12, y, 26]], [1, 1], 8);
+    }
+
+    // due sospensioni in vetro latte sopra la penisola
+    for (const [k, y] of [[0, n - 266], [1, n - 206]]) {
+      tube(P + 'Sospensione_Cavo_' + k, BLK, [[5, y, 330], [5, y, 205]], [0.35, 0.35], 6);
+      tube(P + 'Sospensione_Rosone_' + k, BLK, [[5, y, 327], [5, y, 330]], [3.5, 3.5], 12);
+      rbox(P + 'Sospensione_Paralume_' + k, [250, 232, 185, 200], [-9, y - 14, 175, 19, y + 14, 205], 14, 13.5, 13.5);
+    }
+
+    // ---------- un tocco di colazione sul piano ----------
+    for (const [k, y, c] of [[0, n - 266, [232, 232, 236, 255]], [1, n - 206, [96, 146, 190, 255]]]) {
+      tube(P + 'Tazza_' + k, c, [[8, y, 95], [8, y, 104]], [4.2, 4.2], 14);
+    }
+    rbox(P + 'Fruttiera', [226, 218, 200, 255], [-7, n - 250, 95, 17, n - 222, 104], 12, 3, 6);
+    for (const [k, x, y, c] of [[0, 2, n - 241, [232, 140, 40, 255]], [1, 10, n - 231, [200, 60, 50, 255]], [2, 6, n - 236, [150, 190, 70, 255]]]) {
+      rbox(P + 'Frutto_' + k, c, [x - 4.5, y - 4.5, 101, x + 4.5, y + 4.5, 110], 4.5, 4.2, 4.2);
+    }
+  });
+};

@@ -27,13 +27,16 @@ const group = (id, fn) => { const from = items.length; fn(); for (let k = from; 
 defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
 defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
 defGroup('attacchi-wc-piccolo', 'Attacchi WC piccolo', 'Attacchi');
-// esempio di varianti esclusive: defGroup('cucina-v1', 'Cucina v1', 'Cucina', 'cucina'); defGroup('cucina-v2', 'Cucina v2', 'Cucina', 'cucina');
+defGroup('cucina-v1', 'Cucina v1 · penisola colazione', 'Cucina', 'cucina');   // le varianti della cucina sono mutuamente esclusive (stessa `variant`)
+// prossima variante: defGroup('cucina-v2', 'Cucina v2', 'Cucina', 'cucina');
 const box = (n, c, x0, y0, z0, x1, y1, z1) =>
   items.push({ n, c, box: [x0, y0, z0, x1, y1, z1].map(inch) });
 const slab = (n, c, poly, z0, z1) =>
   items.push({ n, c, slab: { o: poly.map(p => p.map(inch)), h: [], z: [inch(z0), inch(z1)] } });
-const tube = (n, c, p, r) =>
-  items.push({ n, c, tube: { p: p.map(q => q.map(inch)), r: r.map(inch), n: 8 } });
+const tube = (n, c, p, r, seg = 8) =>
+  items.push({ n, c, tube: { p: p.map(q => q.map(inch)), r: r.map(inch), n: seg } });
+const rbox = (n, c, b, r, top, bot = 0) =>
+  items.push({ n, c, rbox: { b: b.map(inch), r: inch(r), top: inch(top), bot: inch(bot) } });
 const quad = (a, b, c, d) => [a, b, c, d].map(p => p.map(inch));
 // falso stipite in un vano su muro lungo X (spessore y0..y1): due montanti e una traversa di 4 cm, nessuna anta
 // stesso falso stipite per vani su muri lungo Y (spessore x0..x1, apertura y0..y1)
@@ -334,6 +337,9 @@ box('/Letto1/Architrave_Finestra', C.est, 189, yW0, 250, 309, yW1, H);   // port
   group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Scarico', WDR, [[190, 790, 45], [184, 790, 45]], [2, 2]));
 }
 
+
+// ---------- arredi (gruppi) ----------
+require('./cucina-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 
 // ---------- scena ----------
 const scene = {
