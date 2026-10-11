@@ -22,7 +22,8 @@ Il primo argomento è il file della scena, il secondo la porta (default 4173). P
 |---|---|
 | Viste predefinite (Saved, Iso, Iso 2, Front, Back, Left, Right, Top, Interior) | pulsanti o tasti `1`–`9` |
 | Zoom | `+` / `−` |
-| Quote del modello, o dell'oggetto cliccato | `D` |
+| Muoversi (camera e punto di rotazione insieme) | `W A S D` o frecce, `Q`/`E` giù/su, `Shift` = più veloce |
+| Quote del modello, o dell'oggetto cliccato | `M` |
 | Unità (cm / in / m) | `U` |
 | Gruppi di oggetti attivabili (arredi, varianti, impianti), tutti spenti di default | `G` (pulsante **Gruppi**) |
 | Mostra/nascondi gli elementi "da rimuovere" | `R` (pulsante **Rimossi**) |
