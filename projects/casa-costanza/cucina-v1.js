@@ -4,7 +4,7 @@
 //   mobile ad angolo (con il tratto trasversale che si salda alla penisola) · colonna FORNELLO (piano a induzione + forno, cappa integrata
 //   nel pensile) · frigo INCASSATO (ante bianche a filo, gole, cappello a 250 cm) · lavastoviglie MINI da 45 · anta stretta ·
 //   mobile ad angolo a pentagono con anta diagonale, con il LAVELLO ANGOLARE a pentagono sotto la finestra.
-// Parete nord (quella dello scaldabagno): mobile a cassetti da 45 e mobile basso da 40 sotto la caldaia.
+// Parete nord (quella dello scaldabagno): mobile a cassetti da 45 e mobile da 40 sotto la caldaia (altezza standard, piano a 94).
 // Pensili alti (da 145 a 250 cm), chiusi, a filo, a tratti; sopra il lavello, mensole A GIORNO a gradini, con pianta a triangolo /
 //   trapezio che sfumano nel muro. Rivestimento in pietra tra piano e pensili, come nella cucina attuale.
 // Un elettrodomestico appoggiato (non incassato) sul piano d'angolo: macchina caffe' a cialde, sotto il pensile a sinistra della cappa e ruotata di 45° verso chi la usa. Microonde e friggitrice ad aria sono
@@ -85,19 +85,21 @@ module.exports = function cucinaV1({ box: _box, tube: _tube, rbox: _rbox, slab: 
 
     // ---------- parete NORD (quella dello scaldabagno): mobile a cassetti e mobile basso sotto la caldaia ----------
     box(P + 'Zoccolo_Nord', BLK, -96, n - 61, 0, -11, n - 6, 10);
-    box(P + 'Nord_Corpo_Cassetti', WH, -96, n - 66, 10, -51, n - 6, 90);                    // mobile a cassetti da 45, a sinistra di quello sotto la caldaia
-    for (let k = 0; k < 2; k++) {
-      const z0 = k === 0 ? 12 : 50, z1 = k === 0 ? 49 : 88;
-      box(P + 'Nord_Cassetto_' + k, WH, -95, n - 68, z0, -52, n - 66, z1);
-      tube(P + 'Nord_Cassetto_Maniglia_' + k, ST, [[-85, n - 69.2, z1 - 5], [-62, n - 69.2, z1 - 5]], [0.8, 0.8]);
-    }
-    box(P + 'Nord_Mobile_Corpo', WH, -51, n - 66, 10, -11, n - 6, 77);                  // mobile basso (40 x 60 x 80) sotto lo scaldabagno
-    box(P + 'Nord_Mobile_Anta', WH, -50, n - 68, 12, -12, n - 66, 76);
-    tube(P + 'Nord_Mobile_Maniglia', ST, [[-17, n - 69.2, 40], [-17, n - 69.2, 66]], [0.8, 0.8]);
-    rbox(P + 'Nord_Mobile_Piano', OAK, [-51, n - 68, 77, -11, n - 6, 80], 2, 1);
+    // ELEMENTO A GIORNO (45 x 60, senza schienale ne' ante): il vano basso (z 12..52) resta libero davanti alla griglia di aerazione del gas (x -101..-81, z 15..37)
+    box(P + 'Nord_Giorno_Fianco_Ovest', WH, -96, n - 66, 10, -94, n, 90);
+    box(P + 'Nord_Giorno_Fianco_Est', WH, -53, n - 66, 10, -51, n, 90);
+    box(P + 'Nord_Giorno_Fondo', WH, -94, n - 66, 10, -53, n - 6, 12);
+    box(P + 'Nord_Giorno_Cielo', WH, -94, n - 66, 88, -53, n, 90);
+    rbox(P + 'Nord_Giorno_Ripiano', OAK, [-94, n - 65, 52, -53, n - 2, 54.5], 1, 0.5);
+    box(P + 'Nord_Giorno_Libro_0', [150, 50, 50, 255], -92, n - 40, 54.5, -73, n - 32, 70);
+    box(P + 'Nord_Giorno_Libro_1', [60, 90, 140, 255], -92, n - 31, 54.5, -73, n - 23, 66);
+    rbox(P + 'Nord_Giorno_Cesto', [196, 170, 120, 255], [-70, n - 46, 54.5, -57, n - 18, 70], 5, 2, 2);
+    box(P + 'Nord_Mobile_Corpo', WH, -51, n - 66, 10, -11, n - 6, 90);                  // mobile (40 x 60 x 90) sotto lo scaldabagno
+    box(P + 'Nord_Mobile_Anta', WH, -50, n - 68, 12, -12, n - 66, 88);
+    tube(P + 'Nord_Mobile_Maniglia', ST, [[-17, n - 69.2, 48], [-17, n - 69.2, 78]], [0.8, 0.8]);
     // piano di lavoro (ardesia) in due pezzi: angolo+trasversale (in fondo, con la penisola) e linea (n-241..n-6); paraschizzi in pietra
     // piano in ardesia: linea ovest + angolo smussato + lavastoviglie mini (profilo unico, sbalzo 1,5 cm)
-    slab(P + 'Piano_Lavoro', DK, [[-171, n - 6], [-51, n - 6], [-51, n - 67.5], [-94.5, n - 67.5], [-108.5, n - 81.5], [-108.5, n - 150], [-171, n - 150]].reverse(), 90, 94);
+    slab(P + 'Piano_Lavoro', DK, [[-171, n - 6], [-11, n - 6], [-11, n - 67.5], [-94.5, n - 67.5], [-108.5, n - 81.5], [-108.5, n - 150], [-171, n - 150]].reverse(), 90, 94);
     rbox(P + 'Piano_Fornello', DK, [-171, n - 302, 90, -109, n - 212, 94], 1.5, 0.8);                // sopra la colonna fornello
     box(P + 'Paraschizzi_Fornello', STONE, -171, n - 302, 94, -169, n - 212, 145);
     box(P + 'Paraschizzi_Pietra', STONE, -171, n - 150, 94, -169, n - 6, 145);

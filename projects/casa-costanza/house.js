@@ -28,7 +28,9 @@ defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
 defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
 defGroup('attacchi-wc-piccolo', 'Attacchi WC piccolo', 'Attacchi');
 defGroup('cucina-v1', 'Cucina v1 · penisola colazione', 'Cucina', 'cucina');   // le varianti della cucina sono mutuamente esclusive (stessa `variant`)
-// prossima variante: defGroup('cucina-v2', 'Cucina v2', 'Cucina', 'cucina');
+defGroup('soggiorno-divano', 'Soggiorno · divano ad L + tappeto + lampada', 'Soggiorno');
+defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno');
+defGroup('cucina-v2', 'Cucina v2 · linea ovest + penisola stretta', 'Cucina', 'cucina');
 const box = (n, c, x0, y0, z0, x1, y1, z1) =>
   items.push({ n, c, box: [x0, y0, z0, x1, y1, z1].map(inch) });
 const slab = (n, c, poly, z0, z1) =>
@@ -200,11 +202,14 @@ box('/COT/Contatore_Gas', [190, 190, 195, 255], -163, yN + 24, 15, -141, yN + 42
 group('attacchi-cucina', () => tube('/COT/Tubo_Gas_1', C.gas, [[-127, yN + 36, 5], [-127, yN + 36, 70]], [1.2, 1.2]));
 group('attacchi-cucina', () => tube('/COT/Tubo_Gas_2', C.gas, [[-121, yN + 36, 5], [-121, yN + 36, 70]], [1.2, 1.2]));
 group('attacchi-cucina', () => tube('/COT/Collettore_Gas', [190, 150, 60, 255], [[-150, yN + 38, 72], [-118, yN + 38, 72]], [1.5, 1.5]));
-// --- scaldabagno / caldaia murale (foto + misure tue): 40 x 34 x 74, a 12 cm dal muro destro (divisorio, x = -T_DIV), quota 140 al centro ---
+// griglia di aerazione del gas (dalla foto): sotto la caldaia, a ovest, ~20 x 22, dal basso a ~15 cm da terra; centro x ~ -91 (stima, da foto in prospettiva)
+box('/COT/Griglia_Aerazione_Gas', [244, 244, 244, 255], -101, yT0 - 1.2, 15, -81, yT0, 37);
+for (let k = 0; k < 7; k++) box('/COT/Griglia_Aerazione_Gas_Lama_' + k, [200, 200, 202, 255], -99.5, yT0 - 1.6, 17 + k * 2.8, -82.5, yT0 - 1.2, 18.6 + k * 2.8);
+// --- scaldabagno / caldaia murale (foto + misure tue): 40 x 34 x 74, a 12 cm dal muro destro (divisorio, x = -T_DIV), fondo a 110 (dalla foto: ~107-110), centro a ~147 ---
 const bx1 = -T_DIV - 12, bx0 = bx1 - 40, bxc = (bx0 + bx1) / 2;   // x -63..-23, asse -43
-box('/COT/Caldaia', [250, 250, 250, 255], bx0, yT0 - 34, 103, bx1, yT0, 177);
+box('/COT/Caldaia', [250, 250, 250, 255], bx0, yT0 - 34, 110, bx1, yT0, 184);
 tube('/COT/Caldaia_Scarico', [250, 250, 250, 255],
-  [[bxc, yT0 - 8, 177], [bxc, yT0 - 8, 200], [bxc - 4, yT0 - 8, 207], [bxc - 11, yT0 - 8, 210], [bxc - 31, yT0 - 8, 210], [bxc - 31, yT0, 210]], [5, 5, 5, 5, 5, 5]);
+  [[bxc, yT0 - 8, 184], [bxc, yT0 - 8, 207], [bxc - 4, yT0 - 8, 214], [bxc - 11, yT0 - 8, 217], [bxc - 31, yT0 - 8, 217], [bxc - 31, yT0, 217]], [5, 5, 5, 5, 5, 5]);
 group('attacchi-cucina', () => tube('/COT/Attacco_Gas', C.gas, [[-171, 356 + DY, 55], [-166, 356 + DY, 55]], [1, 1]));
 group('attacchi-cucina', () => tube('/COT/Attacco_Acqua_1', C.water, [[-171, 351 + DY, 55], [-166, 351 + DY, 55]], [1, 1]));
 group('attacchi-cucina', () => tube('/COT/Attacco_Acqua_2', C.water, [[-171, 341 + DY, 55], [-166, 341 + DY, 55]], [1, 1]));
@@ -340,6 +345,8 @@ box('/Letto1/Architrave_Finestra', C.est, 189, yW0, 250, 309, yW1, H);   // port
 
 // ---------- arredi (gruppi) ----------
 require('./cucina-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./cucina-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./soggiorno-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 
 // ---------- scena ----------
 const scene = {
