@@ -1,0 +1,22 @@
+# dipendenze (si ricreano con `npm install`)
+node_modules/
+
+# log del server in background
+server.log
+*.log
+
+# sistema / editor
+.DS_Store
+.idea/
+.vscode/
+
+# impostazioni locali di Claude Code (permessi per macchina)
+.claude/settings.local.json
+
+# screenshot e file temporanei dei test headless (vanno nello scratchpad, non nel progetto)
+shot*.png
+*.tmp
+
+# eventuali segreti
+.env
+.env.*
