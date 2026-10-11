@@ -68,8 +68,8 @@ I gruppi si definiscono in `house.js` con `defGroup(id, etichetta, categoria, [v
 Il server e la pagina si aggiornano da soli. Cambiando una costante nella tabella in cima al file (per esempio `SOGG_D`, la profondità del soggiorno, o gli spessori dei muri) e rigenerando, tutto si adatta.
 
 Convenzioni nei colori del viewer:
-- **beige**: dimensioni misurate;
-- **azzurro**: dimensioni stimate;
+- **bianco**: tutte le pareti (prima beige = misurate, azzurro = stimate; la distinzione resta nei commenti del codice);
+- **pavimento**: parquet a listoni in rovere (texture `public/textures/parquet-rovere.png`);
 - **arancio**: elementi da rimuovere nei lavori (nomi che terminano con `_Rimosso`, visibili con **Rimossi**).
 
 ## Aggiungere un altro modello

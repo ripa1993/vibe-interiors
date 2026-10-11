@@ -80,7 +80,7 @@ Z is up (same as SketchUp). `n` is the group path (the tooltip shows the last tw
 | `box: [x0,y0,z0,x1,y1,z1]` | axis-aligned box; optional `tex: {url, tile, face}` puts a repeating image on one face (see "Textures / patterns") |
 | `faces: [ [[x,y,z],...], {"v":[outer], "h":[[hole],...]} ]` | generic mesh. Plain faces are fan-triangulated (**convex only**). Faces with holes are projected to 2D and triangulated |
 | `tube: {p:[[x,y,z],...], r:[...], n}` | circular section along a path, per-station radius, smooth normals, flat end caps (pipes, faucets, handles, drains) |
-| `slab: {o:[[x,y]...], h:[[[x,y]...],...], z:[z0,z1]}` | flat slab with polygon holes, extruded along +Z (worktops, floors with openings) |
+| `slab: {o:[[x,y]...], h:[[[x,y]...],...], z:[z0,z1]}` | flat slab with polygon holes, extruded along +Z (worktops, floors with openings); optional item-level `tex: {url, tile}` repeats an image on the top/bottom caps in WORLD x,y (tile = inches per repeat), sides stay `c`: used for a wood floor |
 | `tray: {o:[[x,y]...], z:[zFloor,zTop]}` | open-top tray, smooth inward walls + flat floor (sinks, basins, bowls with a rounded-rectangle plan) |
 | `rbox: {b:[x0,y0,z0,x1,y1,z1], r, top, bot}` | rounded box: plan corner radius `r`, filleted top edge radius `top`, optional filleted bottom edge `bot` (default 0). Retro appliances, doors |
 
@@ -418,7 +418,7 @@ Note: if the session expired or `clean: true` was used, `session_state["dump_sce
 - Stock images often carry a watermark: **crop it out** and tell the user.
 - Rebuild only the textured leaf (e.g. a door group inside a component definition): erase the old group in the definition, add the new one; every instance updates.
 
-**Viewer side:** the full-resolution tile goes in `public/textures/<name>.png` (served at `/textures/<name>.png`; build the seamless mirrored version with PIL too). In `scene.json` add `"tex": {"url":"/textures/x.png","tile":36,"face":"-y"}` to a **`box`** item: that face gets the texture repeated every `tile` inches, the other faces use `c` as plain colour (set `c` to the edge colour). Only boxes support `tex` so far. The exporter doesn't emit `tex` yet: after exporting, add it with the node patch below (match on the leaf name), and keep `session_state["tex"][leaf] = {...}` as the record of what was textured.
+**Viewer side:** the full-resolution tile goes in `public/textures/<name>.png` (served at `/textures/<name>.png`; build the seamless mirrored version with PIL too). In `scene.json` add `"tex": {"url":"/textures/x.png","tile":36,"face":"-y"}` to a **`box`** item: that face gets the texture repeated every `tile` inches, the other faces use `c` as plain colour (set `c` to the edge colour). Boxes (one face) and slabs (top/bottom caps, world x,y) support `tex`. The exporter doesn't emit `tex` yet: after exporting, add it with the node patch below (match on the leaf name), and keep `session_state["tex"][leaf] = {...}` as the record of what was textured.
 ```js
 for (const i of s.items) if (i.n.endsWith('/Door_Front')) { i.c = [edge r,g,b,255]; i.tex = {url:'/textures/x.png', tile:36, face:'-y'}; }
 ```

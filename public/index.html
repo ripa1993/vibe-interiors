@@ -111,6 +111,15 @@ function texturedBoxMaterials(item) {                    // item.tex = {url, til
   return mats;
 }
 
+function texturedSlabMaterials(item) {                   // item.tex = {url, tile} on a slab: the top/bottom caps use world x,y as UV (tiles of `tile` inches), the sides stay plain
+  const tex = textureLoader.load(item.tex.url);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.repeat.set(1 / item.tex.tile, 1 / item.tex.tile);
+  return [new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0.0 }), materialFor(item.c)];   // ExtrudeGeometry groups: 0 = caps, 1 = sides
+}
+
 function materialFor(c) {
   const [r, g, b, a = 255] = c || [200, 200, 200, 255];
   return new THREE.MeshStandardMaterial({
@@ -287,7 +296,7 @@ function build(data) {
     const gs = [].concat(item.g || []);
     if (gs.length && !gs.some(id => enabledGroups.has(id))) continue;   // group switched off
     const geo = geometryFor(item);
-    const mesh = new THREE.Mesh(geo, item.tex && item.box ? texturedBoxMaterials(item) : materialFor(item.c));
+    const mesh = new THREE.Mesh(geo, item.tex && item.box ? texturedBoxMaterials(item) : item.tex && item.slab ? texturedSlabMaterials(item) : materialFor(item.c));
     mesh.name = item.n;
     mesh.castShadow = mesh.receiveShadow = true;
     model.add(mesh);
