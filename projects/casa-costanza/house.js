@@ -32,6 +32,16 @@ defGroup('cucina-v1', 'Cucina v1 · penisola colazione', 'Cucina', 'cucina');   
 defGroup('soggiorno-divano', 'Soggiorno · divano ad L + tappeto + lampada', 'Soggiorno', 'divano');
 defGroup('divano-v1', 'Soggiorno · divano Cavarelli lineare', 'Soggiorno', 'divano');
 defGroup('divano-v2', 'Soggiorno · divano letto IKEA Barsloev con chaise, di fronte alla TV', 'Soggiorno', 'divano');   // i due divani sono varianti: uno esclude l'altro
+defGroup('armadio-ante', 'Camera sud · ante a specchio per i 2 PAX (con armadio-v2)', 'Camera sud');
+defGroup('besta', 'Camera sud · composizione BESTA appesa sotto la TV (con armadio-v2)', 'Camera sud');
+defGroup('parete-testata', 'Camera sud · parete della testata verde salvia', 'Camera sud');
+defGroup('mensole-testata', 'Camera sud · mensole minimali sulla parete verde', 'Camera sud');
+defGroup('tv-camera', 'Camera sud · TV 43" tra i due PAX (usare con armadio-v2)', 'Camera sud');
+defGroup('porta-camera', 'Camera sud · porta scorrevole Corn (Leroy Merlin)', 'Camera sud');
+defGroup('armadio', 'Camera sud · armadio PAX angolare (sud-ovest)', 'Camera sud', 'armadio');
+defGroup('armadio-v2', 'Camera sud · 2 PAX da 100 sulla parete ovest', 'Camera sud', 'armadio');   // varianti: una esclude l'altra
+defGroup('comodini', 'Camera sud · 2 comodini Halston', 'Camera sud');
+defGroup('letto-v1', 'Camera sud · letto IKEA Gladstad 160x200', 'Camera sud');
 defGroup('tavolo', 'Soggiorno · tavolo allungabile + 4 sedie', 'Soggiorno');
 defGroup('soggiorno-libreria', 'Soggiorno · libreria a mensole nella nicchia', 'Soggiorno');
 defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno');
@@ -357,6 +367,16 @@ require('./divano-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./libreria-nicchia.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./tavolo.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./letto-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./comodini.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./armadio.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./armadio-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./armadio-ante.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./tv-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./parete-testata.js')({ box, group });
+require('./mensole-testata.js')({ box, tube, rbox, group });
+require('./besta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./porta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 
 // ---------- scena ----------
 const scene = {
