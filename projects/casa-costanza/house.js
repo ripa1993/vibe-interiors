@@ -28,7 +28,8 @@ defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
 defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
 defGroup('attacchi-wc-piccolo', 'Attacchi WC piccolo', 'Attacchi');
 defGroup('cucina-v1', 'Cucina v1 · penisola colazione', 'Cucina', 'cucina');   // le varianti della cucina sono mutuamente esclusive (stessa `variant`)
-defGroup('soggiorno-divano', 'Soggiorno · divano ad L + tappeto + lampada', 'Soggiorno');
+defGroup('soggiorno-divano', 'Soggiorno · divano ad L + tappeto + lampada', 'Soggiorno', 'divano');
+defGroup('divano-v1', 'Soggiorno · divano Cavarelli lineare', 'Soggiorno', 'divano');   // i due divani sono varianti: uno esclude l'altro
 defGroup('soggiorno-libreria', 'Soggiorno · libreria a mensole nella nicchia', 'Soggiorno');
 defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno');
 defGroup('cucina-v2', 'Cucina v2 · linea ovest + penisola stretta', 'Cucina', 'cucina');
@@ -348,6 +349,7 @@ box('/Letto1/Architrave_Finestra', C.est, 189, yW0, 250, 309, yW1, H);   // port
 require('./cucina-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./soggiorno-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./divano-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./libreria-nicchia.js')({ box, tube, rbox, slab, group, n: yT0 });
 
 // ---------- scena ----------
