@@ -24,9 +24,11 @@ Il primo argomento è il file della scena, il secondo la porta (default 4173). P
 | Zoom | `+` / `−` |
 | Quote del modello, o dell'oggetto cliccato | `D` |
 | Unità (cm / in / m) | `U` |
+| Gruppi di oggetti attivabili (arredi, varianti, impianti), tutti spenti di default | `G` (pulsante **Gruppi**) |
 | Mostra/nascondi gli elementi "da rimuovere" | `R` (pulsante **Rimossi**) |
 
 - L'inquadratura sopravvive al ricaricamento tramite l'URL: `?view=Iso+2` oppure `?cam=ex,ey,ez,tx,ty,tz,fov` (valori in pollici).
+- I **gruppi** si accendono dal pannello, per categoria; lo stato è nell'URL (`?g=cucina-v1,bagno`). Due gruppi con la stessa `variant` si escludono a vicenda (ad esempio cucina v1 / v2), gli altri sono indipendenti.
 - Gli oggetti il cui nome contiene `Rimosso` sono nascosti di default (stato "dopo i lavori"); il pulsante **Rimossi** li mostra, in arancio.
 - Passando il mouse su un oggetto si vedono nome e dimensioni.
 
@@ -35,8 +37,11 @@ Il primo argomento è il file della scena, il secondo la porta (default 4173). P
 ```jsonc
 { "units": "inches",
   "camera": { "eye": [x, y, z], "target": [x, y, z], "up": [0, 0, 1], "fov": 35 },
-  "items": [ { "n": "/Gruppo/Sotto/Foglia", "c": [r, g, b, a], "box": [x0, y0, z0, x1, y1, z1] } ] }
+  "groups": [ { "id": "cucina-v1", "label": "Cucina v1", "cat": "Cucina", "variant": "cucina" } ],
+  "items": [ { "n": "/Gruppo/Sotto/Foglia", "c": [r, g, b, a], "g": "cucina-v1", "box": [x0, y0, z0, x1, y1, z1] } ] }
 ```
+
+`groups` e `g` sono opzionali: un oggetto con `g` (un id o una lista) si vede solo se almeno uno dei suoi gruppi è acceso; gli oggetti senza `g` si vedono sempre.
 
 Z è l'asse verticale, come in SketchUp. Ogni oggetto ha esattamente una chiave di geometria: `box`, `faces`, `tube`, `slab`, `tray`, `rbox`. La descrizione completa è in [`CLAUDE.md`](CLAUDE.md).
 
@@ -56,6 +61,8 @@ CLAUDE.md              note di progetto, trucchi dell'MCP di SketchUp, flusso di
 ```bash
 node projects/casa-costanza/house.js          # riscrive projects/casa-costanza/scene.json
 ```
+
+I gruppi si definiscono in `house.js` con `defGroup(id, etichetta, categoria, [variante])` e si usano con `group(id, () => { ... })`: tutto quello che si disegna dentro prende il gruppo. Oggi ci sono i tre gruppi di attacchi (cucina, WC grande, WC piccolo).
 
 Il server e la pagina si aggiornano da soli. Cambiando una costante nella tabella in cima al file (per esempio `SOGG_D`, la profondità del soggiorno, o gli spessori dei muri) e rigenerando, tutto si adatta.
 

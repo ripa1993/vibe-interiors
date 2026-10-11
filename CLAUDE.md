@@ -62,7 +62,7 @@ open http://localhost:4173
 4. Verify with a headless screenshot (see "Testing") and read the PNG.
 5. Only call `save_model` when the user asks for a `.skp`.
 
-**Fallback when `mcp__sketchup__*` is not connected** (it can fail silently: ToolSearch finds nothing): write the scene with a parametric Node script (`projects/<name>/house.js`: dimensions in cm in a table, `box`/`slab`/`tube`/`faces` helpers, converts to inches, writes `scene.json`). Walls with openings = boxes (segments + lintel + sill); only curved lintels (arch) need a hand-made `faces` mesh (quads between the arch polyline and the top edge, plus the intrados). The result exists only in the viewer, not in SketchUp: say so.
+**Fallback when `mcp__sketchup__*` is not connected** (it can fail silently: ToolSearch finds nothing): write the scene with a parametric Node script (`projects/<name>/house.js`: dimensions in cm in a table, `defGroup(id, label, cat, [variant])` + `group(id, () => {...})` to tag whatever is drawn inside as a switchable group, `box`/`slab`/`tube`/`faces` helpers, converts to inches, writes `scene.json`). Walls with openings = boxes (segments + lintel + sill); only curved lintels (arch) need a hand-made `faces` mesh (quads between the arch polyline and the top edge, plus the intrados). The result exists only in the viewer, not in SketchUp: say so.
 
 Cost tip: the whole scene goes through Claude's output twice (tool result, then Write). Keep it small: boxes as `box`, curved things as parametric primitives (`tube`, `slab`, `tray`, `rbox`), never as thousands of triangles. Round numbers to 3 decimals.
 
@@ -70,7 +70,8 @@ Cost tip: the whole scene goes through Claude's output twice (tool result, then 
 ```jsonc
 { "units": "inches",
   "camera": {"eye":[x,y,z], "target":[x,y,z], "up":[x,y,z], "fov":35},   // applied on FIRST load only; "up" is ignored (always Z up)
-  "items": [ {"n":"/Group/Sub/Leaf", "c":[r,g,b,a], <exactly one geometry key>} ] }
+  "groups": [ {"id":"cucina-v1", "label":"Cucina v1", "cat":"Cucina", "variant":"cucina"} ],   // optional: switchable groups, see below
+  "items": [ {"n":"/Group/Sub/Leaf", "c":[r,g,b,a], "g":"cucina-v1", <exactly one geometry key>} ] }
 ```
 Z is up (same as SketchUp). `n` is the group path (the tooltip shows the last two parts). `c` is the colour 0-255.
 
@@ -91,6 +92,7 @@ Outlines are `EdgesGeometry` with a 20° threshold; materials are `MeshStandardM
 - **The view survives a refresh through the URL**: a preset click writes `?view=<name>` (e.g. `?view=Iso+2`); any orbit/zoom writes `?cam=ex,ey,ez,tx,ty,tz,fov` (and clears `view`). On first load `?cam` wins, then `?view`, then the camera saved in `scene.json`. Scene reloads (file changes) never touch the camera. `history.replaceState` is used, so no history entries pile up. Open `http://localhost:4173/?view=Top` to start in a given view.
 - **Zoom** `+` / `−` buttons and keys (dolly toward the orbit target; clamped 5…4000 in).
 - **Dims** (key `D`): overall W/D/H of the whole model as dimension lines; **click an object** to dimension just that object (click again to clear); **hover** tooltip with name + size. **Unit button** (key `U`) cycles cm / in / m.
+- **Gruppi** button (key `G`, shown only when the scene has groups): a panel with one checkbox per group, listed by category; **everything is off by default**. An item with `"g": "id"` (or a list of ids) is drawn only when one of its groups is on; items without `g` are always drawn. Groups sharing the same `variant` are mutually exclusive (turning one on turns the other off), others are independent. "Accendi tutto" picks the first group of each variant set. The enabled ids live in the URL (`?g=id1,id2`), so a refresh keeps them. Ids used by items but missing from `groups` appear under "Altro". Off groups aren't built (hover, dims and click ignore them), like `Rimosso` items; the status line still counts all items.
 - **Rimossi** button (key `R`): items whose name contains `Rimosso` (walls to be demolished) are hidden by default ("after the works" state); the button shows them again, highlighted in orange. Name demolition candidates `..._Rimosso` and colour them differently in the scene. The toggle isn't kept in the URL.
 - Live status dot (green = SSE connected) + object count + last-reload time.
 - Reloads rebuild the meshes but keep the orbit camera, the selection and the dimensions.

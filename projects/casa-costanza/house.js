@@ -17,6 +17,17 @@ const C = { wall: [232, 226, 214, 255], est: [200, 214, 232, 255], rem: [226, 16
             heater: [215, 215, 222, 255] };
 
 const items = [];
+
+// Gruppi attivabili nel viewer (tutti spenti di default). Gli oggetti senza gruppo sono sempre visibili.
+//   defGroup(id, etichetta, categoria, [variante])  -> gruppi con la stessa `variante` sono mutuamente esclusivi (es. cucina v1 / v2)
+//   group(id, () => { ...box()/tube()/slab()... })  -> tutto cio' che disegni dentro prende il gruppo `id`
+const GROUPS = [];
+const defGroup = (id, label, cat, variant) => GROUPS.push(variant ? { id, label, cat, variant } : { id, label, cat });
+const group = (id, fn) => { const from = items.length; fn(); for (let k = from; k < items.length; k++) items[k].g = id; };
+defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
+defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
+defGroup('attacchi-wc-piccolo', 'Attacchi WC piccolo', 'Attacchi');
+// esempio di varianti esclusive: defGroup('cucina-v1', 'Cucina v1', 'Cucina', 'cucina'); defGroup('cucina-v2', 'Cucina v2', 'Cucina', 'cucina');
 const box = (n, c, x0, y0, z0, x1, y1, z1) =>
   items.push({ n, c, box: [x0, y0, z0, x1, y1, z1].map(inch) });
 const slab = (n, c, poly, z0, z1) =>
@@ -83,16 +94,16 @@ const yT0 = 401 + DY, yT1 = yT0 + T_SOPRA;
   // scaldasalviette (dalla foto: parte da ~70 cm e sale fino a ~235, dopo la placca di scarico verso sud) e attacchi dei sanitari (stima)
   box('/WC/Scaldasalviette', C.white, -187, 420, 70, -182, 475, 235);
   const CW = [80, 130, 210, 255], HW = [200, 70, 60, 255], DR = [150, 150, 155, 255], MET = [190, 190, 195, 255];
-  tube('/WC/Valvola_Scaldasalviette_1', MET, [[-182, 425, 66], [-187, 425, 66]], [1.2, 1.2]);
-  tube('/WC/Valvola_Scaldasalviette_2', MET, [[-182, 470, 66], [-187, 470, 66]], [1.2, 1.2]);
-  box('/WC/Placca_Scarico', [240, 235, 215, 255], -184, 481, 100, -182, 498, 125);                    // placca di scarico del water sul muro est, ~17 x 25
-  tube('/WC/Water_Scarico', DR, [[-222, 488, 0], [-222, 488, 12]], [5.5, 5.5]);                       // scarico del water a pavimento
-  tube('/WC/Bidet_Acqua_Fredda', CW, [[-182, 430, 22], [-187, 430, 22]], [1, 1]);
-  tube('/WC/Bidet_Acqua_Calda', HW, [[-182, 418, 22], [-187, 418, 22]], [1, 1]);
-  tube('/WC/Bidet_Scarico', DR, [[-222, 430, 0], [-222, 430, 10]], [2.5, 2.5]);
-  tube('/WC/Lavabo_Acqua_Fredda', CW, [[-182, 324, 52], [-187, 324, 52]], [1, 1]);
-  tube('/WC/Lavabo_Acqua_Calda', HW, [[-182, 336, 52], [-187, 336, 52]], [1, 1]);
-  tube('/WC/Lavabo_Scarico', DR, [[-182, 330, 45], [-188, 330, 45]], [2, 2]);
+  group('attacchi-wc-grande', () => tube('/WC/Valvola_Scaldasalviette_1', MET, [[-182, 425, 66], [-187, 425, 66]], [1.2, 1.2]));
+  group('attacchi-wc-grande', () => tube('/WC/Valvola_Scaldasalviette_2', MET, [[-182, 470, 66], [-187, 470, 66]], [1.2, 1.2]));
+  group('attacchi-wc-grande', () => box('/WC/Placca_Scarico', [240, 235, 215, 255], -184, 481, 100, -182, 498, 125));                    // placca di scarico del water sul muro est, ~17 x 25
+  group('attacchi-wc-grande', () => tube('/WC/Water_Scarico', DR, [[-222, 488, 0], [-222, 488, 12]], [5.5, 5.5]));                       // scarico del water a pavimento
+  group('attacchi-wc-grande', () => tube('/WC/Bidet_Acqua_Fredda', CW, [[-182, 430, 22], [-187, 430, 22]], [1, 1]));
+  group('attacchi-wc-grande', () => tube('/WC/Bidet_Acqua_Calda', HW, [[-182, 418, 22], [-187, 418, 22]], [1, 1]));
+  group('attacchi-wc-grande', () => tube('/WC/Bidet_Scarico', DR, [[-222, 430, 0], [-222, 430, 10]], [2.5, 2.5]));
+  group('attacchi-wc-grande', () => tube('/WC/Lavabo_Acqua_Fredda', CW, [[-182, 324, 52], [-187, 324, 52]], [1, 1]));
+  group('attacchi-wc-grande', () => tube('/WC/Lavabo_Acqua_Calda', HW, [[-182, 336, 52], [-187, 336, 52]], [1, 1]));
+  group('attacchi-wc-grande', () => tube('/WC/Lavabo_Scarico', DR, [[-182, 330, 45], [-188, 330, 45]], [2, 2]));
 }
 // fondo della nicchia COT: foro passante per la finestra (x -171..-129, z 80..245), con telaio esterno in bronzo sul filo del muro
 box('/COT/Nicchia_Fondo_A', C.wall, -129, yT1 - 7, 0, -107, yT1, H);
@@ -183,17 +194,17 @@ box('/COT/Finestra_Telaio_Basso', FR, -168, yN + 24, 80, -132, yN + 28, 83);
 box('/COT/Finestra_Telaio_Alto', FR, -168, yN + 24, 242, -132, yN + 28, 245);
 box('/COT/Finestra_Vetro', C.glass, -168, yN + 25.5, 83, -132, yN + 26.5, 242);           // 42 x 165 circa, appoggiata al lato ovest della nicchia (dalle foto), stima
 box('/COT/Contatore_Gas', [190, 190, 195, 255], -163, yN + 24, 15, -141, yN + 42, 50);   // stima 22 x 18 x 35
-tube('/COT/Tubo_Gas_1', C.gas, [[-127, yN + 36, 5], [-127, yN + 36, 70]], [1.2, 1.2]);
-tube('/COT/Tubo_Gas_2', C.gas, [[-121, yN + 36, 5], [-121, yN + 36, 70]], [1.2, 1.2]);
-tube('/COT/Collettore_Gas', [190, 150, 60, 255], [[-150, yN + 38, 72], [-118, yN + 38, 72]], [1.5, 1.5]);
+group('attacchi-cucina', () => tube('/COT/Tubo_Gas_1', C.gas, [[-127, yN + 36, 5], [-127, yN + 36, 70]], [1.2, 1.2]));
+group('attacchi-cucina', () => tube('/COT/Tubo_Gas_2', C.gas, [[-121, yN + 36, 5], [-121, yN + 36, 70]], [1.2, 1.2]));
+group('attacchi-cucina', () => tube('/COT/Collettore_Gas', [190, 150, 60, 255], [[-150, yN + 38, 72], [-118, yN + 38, 72]], [1.5, 1.5]));
 // --- scaldabagno / caldaia murale (foto + misure tue): 40 x 34 x 74, a 12 cm dal muro destro (divisorio, x = -T_DIV), quota 140 al centro ---
 const bx1 = -T_DIV - 12, bx0 = bx1 - 40, bxc = (bx0 + bx1) / 2;   // x -63..-23, asse -43
 box('/COT/Caldaia', [250, 250, 250, 255], bx0, yT0 - 34, 103, bx1, yT0, 177);
 tube('/COT/Caldaia_Scarico', [250, 250, 250, 255],
   [[bxc, yT0 - 8, 177], [bxc, yT0 - 8, 200], [bxc - 4, yT0 - 8, 207], [bxc - 11, yT0 - 8, 210], [bxc - 31, yT0 - 8, 210], [bxc - 31, yT0, 210]], [5, 5, 5, 5, 5, 5]);
-tube('/COT/Attacco_Gas', C.gas, [[-171, 356 + DY, 55], [-166, 356 + DY, 55]], [1, 1]);
-tube('/COT/Attacco_Acqua_1', C.water, [[-171, 351 + DY, 55], [-166, 351 + DY, 55]], [1, 1]);
-tube('/COT/Attacco_Acqua_2', C.water, [[-171, 341 + DY, 55], [-166, 341 + DY, 55]], [1, 1]);
+group('attacchi-cucina', () => tube('/COT/Attacco_Gas', C.gas, [[-171, 356 + DY, 55], [-166, 356 + DY, 55]], [1, 1]));
+group('attacchi-cucina', () => tube('/COT/Attacco_Acqua_1', C.water, [[-171, 351 + DY, 55], [-166, 351 + DY, 55]], [1, 1]));
+group('attacchi-cucina', () => tube('/COT/Attacco_Acqua_2', C.water, [[-171, 341 + DY, 55], [-166, 341 + DY, 55]], [1, 1]));
 
 // ---------- WC GRANDE (stima): interno x -382..-182, y 39..401 ----------
 box('/WC/Vasca_Rimosso', C.rem, -382, yT0 - 170, 0, -312, yT0, 55);   // vasca (da rimuovere, al suo posto una doccia): stima 170 x 70 x 55, lungo il muro ovest, lato corto contro il muro nord
@@ -313,14 +324,14 @@ box('/Letto1/Architrave_Finestra', C.est, 189, yW0, 250, 309, yW1, H);   // port
   stipiteX('/Ala/Tramezzo_WC_Stipite', 112, 182, y0, y1);
   // attacchi del WC piccolo (stima dalle foto 33 e 34): water e bidet verso la finestra (ovest), lavabo sul muro est
   const WCW = [80, 130, 210, 255], WHW = [200, 70, 60, 255], WDR = [150, 150, 155, 255];
-  box('/Ala/WCp_Placca_Scarico', [240, 235, 215, 255], 43, L(55) - 3, 100, 68, L(55), 125);        // placca di scarico sulla parete di fondo, ~25 x 25
-  tube('/Ala/WCp_Water_Scarico', WDR, [[55, L(55) - 14, 0], [55, L(55) - 14, 12]], [5.5, 5.5]);
-  tube('/Ala/WCp_Bidet_Acqua_Fredda', WCW, [[2, L(2), 22], [2, L(2) - 4, 22]], [1, 1]);
-  tube('/Ala/WCp_Bidet_Acqua_Calda', WHW, [[14, L(14), 22], [14, L(14) - 4, 22]], [1, 1]);
-  tube('/Ala/WCp_Bidet_Scarico', WDR, [[8, L(8) - 25, 0], [8, L(8) - 25, 10]], [2.5, 2.5]);
-  tube('/Ala/WCp_Lavabo_Acqua_Fredda', WCW, [[190, 784, 52], [185, 784, 52]], [1, 1]);
-  tube('/Ala/WCp_Lavabo_Acqua_Calda', WHW, [[190, 796, 52], [185, 796, 52]], [1, 1]);
-  tube('/Ala/WCp_Lavabo_Scarico', WDR, [[190, 790, 45], [184, 790, 45]], [2, 2]);
+  group('attacchi-wc-piccolo', () => box('/Ala/WCp_Placca_Scarico', [240, 235, 215, 255], 43, L(55) - 3, 100, 68, L(55), 125));        // placca di scarico sulla parete di fondo, ~25 x 25
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Water_Scarico', WDR, [[55, L(55) - 14, 0], [55, L(55) - 14, 12]], [5.5, 5.5]));
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Bidet_Acqua_Fredda', WCW, [[2, L(2), 22], [2, L(2) - 4, 22]], [1, 1]));
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Bidet_Acqua_Calda', WHW, [[14, L(14), 22], [14, L(14) - 4, 22]], [1, 1]));
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Bidet_Scarico', WDR, [[8, L(8) - 25, 0], [8, L(8) - 25, 10]], [2.5, 2.5]));
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Acqua_Fredda', WCW, [[190, 784, 52], [185, 784, 52]], [1, 1]));
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Acqua_Calda', WHW, [[190, 796, 52], [185, 796, 52]], [1, 1]));
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Scarico', WDR, [[190, 790, 45], [184, 790, 45]], [2, 2]));
 }
 
 
@@ -330,6 +341,6 @@ const scene = {
   camera: { eye: [700, -1500, 1200].map(inch), target: [34, 131 + DY / 2, 0].map(inch), up: [0, 0, 1], fov: 35 },
   items,
 };
-fs.writeFileSync(OUT, '{"units":"inches","camera":' + JSON.stringify(scene.camera) + ',"items":[\n' +
+fs.writeFileSync(OUT, '{"units":"inches","camera":' + JSON.stringify(scene.camera) + ',"groups":' + JSON.stringify(GROUPS) + ',"items":[\n' +
   items.map(i => JSON.stringify(i)).join(',\n') + '\n]}\n');
 console.log('items:', items.length, '->', OUT);

@@ -19,6 +19,15 @@
   #dimctl { display: flex; gap: 4px; margin-left: 6px; padding-left: 10px; border-left: 1px solid #d5d8de; }
   button.on { background: #d9480f; border-color: #d9480f; color: #fff; }
   #views button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  #gbtn { display: none; }
+  #gbtn.has { display: inline-block; }
+  #groups { position: fixed; left: 10px; bottom: 10px; z-index: 5; display: none; max-height: 62vh; overflow: auto; min-width: 210px;
+            background: rgba(255,255,255,.95); border: 1px solid #d5d8de; border-radius: 8px; padding: 8px 10px; }
+  #groups.open { display: block; }
+  #groups h4 { margin: 8px 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6a7080; }
+  #groups h4:first-child { margin-top: 0; }
+  #groups label { display: flex; gap: 6px; align-items: center; padding: 2px 0; cursor: pointer; }
+  #groups .acts { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e3e5ea; }
   #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
   .dim { position: absolute; transform: translate(-50%, -50%); background: #fff; color: #b8400c; border: 1px solid #d9480f;
          border-radius: 4px; padding: 1px 5px; font-weight: 600; white-space: nowrap; }
@@ -32,7 +41,8 @@
 <div id="bar"><span id="dot"></span><span id="status">connecting…</span>
   <span id="views"></span>
   <span id="zoom"><button id="zin" title="Zoom in (+)">+</button><button id="zout" title="Zoom out (−)">−</button></span>
-  <span id="dimctl"><button id="dims" title="Show overall dimensions (D)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="removed" title="Hide / show items whose name contains &quot;Rimosso&quot; (R)">Rimossi</button></span></div>
+  <span id="dimctl"><button id="dims" title="Show overall dimensions (D)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="gbtn" title="Show / hide groups of objects (G)">Gruppi</button><button id="removed" title="Hide / show items whose name contains &quot;Rimosso&quot; (R)">Rimossi</button></span></div>
+<div id="groups"></div>
 <div id="labels"></div>
 <div id="tip"></div>
 <script type="importmap">
@@ -258,6 +268,10 @@ function geometryFor(item) {
   return g;
 }
 
+// groups: items may carry "g" (an id or a list of ids); an item with groups is drawn only when one of them is enabled. Items without "g" are always drawn.
+// Enabled groups live in the URL (?g=id1,id2); everything is off by default.
+const enabledGroups = new Set((new URLSearchParams(location.search).get('g') || '').split(',').filter(Boolean));
+let groupDefs = [];                                               // [{ id, label, cat, variant }]
 let showRemoved = false;                                          // items named "...Rimosso..." are hidden by default
 function build(data) {
   for (const o of [...model.children]) {
@@ -269,6 +283,8 @@ function build(data) {
   }
   for (const item of data.items) {
     if (!showRemoved && item.n.includes('Rimosso')) continue;      // "after the works" state
+    const gs = [].concat(item.g || []);
+    if (gs.length && !gs.some(id => enabledGroups.has(id))) continue;   // group switched off
     const geo = geometryFor(item);
     const mesh = new THREE.Mesh(geo, item.tex && item.box ? texturedBoxMaterials(item) : materialFor(item.c));
     mesh.name = item.n;
@@ -430,9 +446,65 @@ function refreshDims() {
   document.getElementById('dims').classList.toggle('on', showDims);
   document.getElementById('unit').textContent = UNITS[unit];
 }
+// ---- groups panel: checkboxes per group, grouped by category; groups sharing a "variant" are mutually exclusive ----
+const groupsEl = document.getElementById('groups'), gbtn = document.getElementById('gbtn');
+function computeGroupDefs(data) {
+  const defs = new Map();
+  for (const g of data.groups || []) defs.set(g.id, { id: g.id, label: g.label || g.id, cat: g.cat || 'Altro', variant: g.variant || null });
+  for (const it of data.items) for (const id of [].concat(it.g || [])) if (!defs.has(id)) defs.set(id, { id, label: id, cat: 'Altro', variant: null });
+  return [...defs.values()];
+}
+function setGroup(id, on) {
+  const def = groupDefs.find(d => d.id === id);
+  if (on && def?.variant) for (const d of groupDefs) if (d.variant === def.variant && d.id !== id) enabledGroups.delete(d.id);
+  on ? enabledGroups.add(id) : enabledGroups.delete(id);
+  groupsChanged();
+}
+function setAllGroups(on) {
+  enabledGroups.clear();
+  if (on) {
+    const seen = new Set();                                  // "all on" picks the first group of every variant set
+    for (const d of groupDefs) { if (d.variant) { if (seen.has(d.variant)) continue; seen.add(d.variant); } enabledGroups.add(d.id); }
+  }
+  groupsChanged();
+}
+function groupsChanged() {
+  const live = groupDefs.map(d => d.id).filter(id => enabledGroups.has(id));
+  setParams({ g: live.length ? live.join(',') : null });
+  selected = null;
+  if (current) { build(current); refreshDims(); }
+  renderGroups(current);
+}
+function renderGroups(data) {
+  if (!data) return;
+  groupDefs = computeGroupDefs(data);
+  const n = groupDefs.filter(d => enabledGroups.has(d.id)).length;
+  gbtn.classList.toggle('has', groupDefs.length > 0);
+  gbtn.classList.toggle('on', n > 0);
+  gbtn.textContent = n ? `Gruppi (${n})` : 'Gruppi';
+  groupsEl.innerHTML = '';
+  const cats = [...new Set(groupDefs.map(d => d.cat))];
+  for (const cat of cats) {
+    const h = document.createElement('h4'); h.textContent = cat; groupsEl.appendChild(h);
+    for (const d of groupDefs.filter(x => x.cat === cat)) {
+      const l = document.createElement('label'), cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = enabledGroups.has(d.id);
+      cb.onchange = () => setGroup(d.id, cb.checked);
+      l.append(cb, d.label + (d.variant ? '  ·  variante' : ''));
+      groupsEl.appendChild(l);
+    }
+  }
+  const acts = document.createElement('div'); acts.className = 'acts';
+  for (const [txt, on] of [['Accendi tutto', true], ['Spegni tutto', false]]) {
+    const b = document.createElement('button'); b.textContent = txt; b.onclick = () => setAllGroups(on); acts.appendChild(b);
+  }
+  groupsEl.appendChild(acts);
+}
+gbtn.onclick = () => groupsEl.classList.toggle('open');
+
 // scene reloads rebuild the meshes, so re-apply the selection and dimensions afterwards
 const _load = load;
-load = async function () { await _load(); refreshDims(); };
+load = async function () { await _load(); renderGroups(current); refreshDims(); };
 
 document.getElementById('dims').onclick = () => { showDims = !showDims; selected = null; refreshDims(); };
 document.getElementById('removed').onclick = () => {
@@ -494,6 +566,7 @@ addEventListener('keydown', e => {
   if (e.key === 'd' || e.key === 'D') return document.getElementById('dims').click();
   if (e.key === 'u' || e.key === 'U') return document.getElementById('unit').click();
   if (e.key === 'r' || e.key === 'R') return document.getElementById('removed').click();
+  if (e.key === 'g' || e.key === 'G') return gbtn.click();
   const i = Number(e.key) - 1;
   if (i >= 0 && i < PRESETS.length && !e.metaKey && !e.ctrlKey) runPreset(i);
 });
