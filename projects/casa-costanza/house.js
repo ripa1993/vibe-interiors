@@ -24,7 +24,7 @@ const items = [];
 //   defGroup(id, etichetta, categoria, [variante])  -> gruppi con la stessa `variante` sono mutuamente esclusivi (es. cucina v1 / v2)
 //   group(id, () => { ...box()/tube()/slab()... })  -> tutto cio' che disegni dentro prende il gruppo `id`
 const GROUPS = [];
-const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'antibagno-scarpiera', 'antibagno-elvarli', 'ingresso-attaccapanni', 'ingresso-stampe-mensola', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord', 'soggiorno-billy', 'ripostiglio-stagione', 'ripostiglio-pulizia'];   // accesi al caricamento del viewer
+const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'antibagno-scarpiera', 'antibagno-elvarli', 'ingresso-attaccapanni', 'ingresso-stampe-mensola', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord', 'soggiorno-billy', 'ripostiglio-stagione', 'ripostiglio-pulizia', 'luci'];   // accesi al caricamento del viewer
 const defGroup = (id, label, cat, variant) => GROUPS.push(Object.assign({ id, label, cat }, variant ? { variant } : {}, DEFAULT_ON.includes(id) ? { on: true } : {}));
 const group = (id, fn) => { const from = items.length; fn(); for (let k = from; k < items.length; k++) items[k].g = id; };
 defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
@@ -54,6 +54,7 @@ defGroup('soggiorno-libreria', 'Soggiorno · libreria a mensole nella nicchia', 
 defGroup('soggiorno-billy', 'Soggiorno · composizione BILLY (IKEA) sul muro sud, a ovest della porta', 'Soggiorno');
 defGroup('ripostiglio-stagione', 'Ripostiglio ovest · cambio di stagione (asta, scatole, valigie)', 'Ripostigli');
 defGroup('ripostiglio-pulizia', 'Ripostiglio est · pulizia (scope, aspirapolvere, detersivi)', 'Ripostigli');
+defGroup('luci', 'Illuminazione · punti luce a soffitto e applique in tutte le stanze', 'Illuminazione');
 defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno', 'tv');
 defGroup('soggiorno-tv-est', 'Soggiorno · TV a est, parete attrezzata', 'Soggiorno', 'tv');   // varianti: una esclude l'altra
 defGroup('cucina-v4', 'Cucina v4 · come la v3, frigo e trasversale scambiati', 'Cucina', 'cucina');
@@ -407,6 +408,7 @@ require('./besta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./porta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./billy-soggiorno.js')({ box, tube, group });
 require('./ripostigli.js')({ box, tube, rbox, group });
+require('./luci.js')({ box, tube, group, L });
 require('./camera-nord.js')({ box, tube, rbox, slab, group, L });
 require('./scarpiera-antibagno.js')({ box, tube, group });
 require('./armadio-elvarli.js')({ box, tube, group });
