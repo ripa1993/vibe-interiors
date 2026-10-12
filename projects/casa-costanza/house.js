@@ -23,7 +23,8 @@ const items = [];
 //   defGroup(id, etichetta, categoria, [variante])  -> gruppi con la stessa `variante` sono mutuamente esclusivi (es. cucina v1 / v2)
 //   group(id, () => { ...box()/tube()/slab()... })  -> tutto cio' che disegni dentro prende il gruppo `id`
 const GROUPS = [];
-const defGroup = (id, label, cat, variant) => GROUPS.push(variant ? { id, label, cat, variant } : { id, label, cat });
+const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord'];   // accesi al caricamento del viewer
+const defGroup = (id, label, cat, variant) => GROUPS.push(Object.assign({ id, label, cat }, variant ? { variant } : {}, DEFAULT_ON.includes(id) ? { on: true } : {}));
 const group = (id, fn) => { const from = items.length; fn(); for (let k = from; k < items.length; k++) items[k].g = id; };
 defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
 defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
@@ -35,16 +36,14 @@ defGroup('soggiorno-divano', 'Soggiorno · divano ad L + tappeto + lampada', 'So
 defGroup('divano-v1', 'Soggiorno · divano Cavarelli lineare', 'Soggiorno', 'divano');
 defGroup('divano-v2', 'Soggiorno · divano letto IKEA Barsloev con chaise, di fronte alla TV', 'Soggiorno', 'divano');
 defGroup('divano-v3', 'Soggiorno · divano IKEA ruotato verso la TV a est, chaise a nord', 'Soggiorno', 'divano');   // i due divani sono varianti: uno esclude l'altro
-defGroup('armadio-ante', 'Camera sud · ante a specchio per i 2 PAX (con armadio-v2)', 'Camera sud');
-defGroup('besta', 'Camera sud · composizione BESTA appesa sotto la TV (con armadio-v2)', 'Camera sud');
 defGroup('parete-testata', 'Camera sud · parete della testata verde salvia', 'Camera sud');
 defGroup('mensole-testata', 'Camera sud · mensole minimali sulla parete verde', 'Camera sud');
-defGroup('tv-camera', 'Camera sud · TV 43" tra i due PAX (usare con armadio-v2)', 'Camera sud');
 defGroup('porta-camera', 'Camera sud · porta scorrevole Corn (Leroy Merlin)', 'Camera sud');
 defGroup('armadio', 'Camera sud · armadio PAX angolare (sud-ovest)', 'Camera sud', 'armadio');
-defGroup('armadio-v2', 'Camera sud · 2 PAX da 100 sulla parete ovest', 'Camera sud', 'armadio');   // varianti: una esclude l'altra
+defGroup('armadio-v2', 'Camera sud · armadio v2: 2 PAX da 100 + ante a specchio + TV 43" + BESTA (parete ovest)', 'Camera sud', 'armadio');   // varianti: una esclude l'altra
 defGroup('comodini', 'Camera sud · 2 comodini Halston', 'Camera sud');
 defGroup('letto-v1', 'Camera sud · letto IKEA Gladstad 160x200', 'Camera sud');
+defGroup('camera-nord', 'Camera nord · camera ospiti: libreria nella nicchia, divano letto, cassettiera, tavolino, tappeto', 'Camera nord');
 defGroup('tavolo', 'Soggiorno · tavolo allungabile + 4 sedie', 'Soggiorno');
 defGroup('soggiorno-libreria', 'Soggiorno · libreria a mensole nella nicchia', 'Soggiorno');
 defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno', 'tv');
@@ -334,26 +333,32 @@ box('/Letto1/Architrave_Finestra', C.est, 189, yW0, 250, 309, yW1, H);   // port
   obl('/Ala/Nicchia_Scrivania_Fondo', 270, 380, 15, 0, 270);
   obl('/Ala/Nicchia_Scrivania_Sopra', 270, 380, 0, 270, H);
 }
+const XT = 173;   // x della faccia ovest del tramezzo tra antibagno/WC piccolo e camera piccola (era 190). 173 + 15 di spessore = 188: camera larga ~242 fino al muro est (x 430), come nella foto (letto 160 + 2 comodini da 40)
 { // tramezzo antibagno / camera piccola con vano 80 x 210 vicino all'ingresso dall'arco (stima, solo stipite)
-  const d0 = 480 + DY, d1 = d0 + 90, top = L(197);
-  box('/Ala/Tramezzo_Letto_A', C.est, 190, yT1, 0, 205, d0, H);
-  const r0 = 742, r1 = r0 + 96, zr0 = 118, zr1 = 215;                      // apertura con specchio e mensole (ex porta), allineata al WC piccolo: y 742..838 (stima dalla foto)
-  box('/Ala/Tramezzo_Letto_B_Basso', C.est, 190, d1, 0, 205, top, zr0);
-  box('/Ala/Tramezzo_Letto_B_Alto', C.est, 190, d1, zr1, 205, top, H);
-  box('/Ala/Tramezzo_Letto_B_Lato_A', C.est, 190, d1, zr0, 205, r0, zr1);
-  box('/Ala/Tramezzo_Letto_B_Lato_B', C.est, 190, r1, zr0, 205, top, zr1);
-  box('/Ala/Apertura_Specchio_Fondo', [120, 85, 55, 255], 190, r0, zr0, 198, r1, zr1);   // fondo in legno, nicchia profonda ~7 cm
-  box('/Ala/Calorifero_Camera', C.white, 205, 735, 8, 215, 735 + 91, 106);                // dalla foto: sotto l'apertura, nella fascia del WC piccolo (y 735..826), ~91 x 98, stima
-  box('/Ala/Tramezzo_Letto_Architrave', C.est, 190, d0, 255, 205, d1, H);                     // porta con sopraluce: vano fino a 255
-  box('/Ala/Tramezzo_Letto_Sopraluce', C.glass, 196, d0 + 4, 212, 199, d1 - 4, 252);          // sopraluce vetrato
-  stipiteY('/Ala/Tramezzo_Letto_Stipite', 190, 205, d0, d1, 210);
+  const d0 = 480 + DY, d1 = d0 + 90, topIn = L(XT + 7), top = L(XT + 15) + 3;   // top: i box entrano di qualche cm nel muro obliquo (L..L+30), cosi' non restano fessure ne' z-fight; topIn: filo interno medio
+  box('/Ala/Tramezzo_Letto_A', C.est, XT, yT1, 0, XT + 15, d0, H);
+  const r0 = 742, r1 = Math.min(r0 + 96, topIn - 6), zr0 = 118, zr1 = 215;                      // apertura con specchio e mensole (ex porta), allineata al WC piccolo: y 742..838 (stima dalla foto)
+  box('/Ala/Tramezzo_Letto_B_Basso', C.est, XT, d1, 0, XT + 15, top, zr0);
+  box('/Ala/Tramezzo_Letto_B_Alto', C.est, XT, d1, zr1, XT + 15, top, H);
+  box('/Ala/Tramezzo_Letto_B_Lato_A', C.est, XT, d1, zr0, XT + 15, r0, zr1);
+  box('/Ala/Tramezzo_Letto_B_Lato_B', C.est, XT, r1, zr0, XT + 15, top, zr1);
+  box('/Ala/Apertura_Specchio_Fondo', [120, 85, 55, 255], XT, r0, zr0, XT + 8, r1, zr1);   // fondo in legno, nicchia profonda ~7 cm
+  { // calorifero a colonne (stesse misure del blocco originale: x XT+15..XT+25, y 735..826, z 8..106): 10 colonne verticali + 2 collettori
+    const cx = XT + 20, y0 = 735, w = 91, n = 10, pitch = w / n;
+    for (let k = 0; k < n; k++) tube('/Ala/Calorifero_Camera_Colonna_' + k, C.white, [[cx, y0 + pitch * (k + 0.5), 12], [cx, y0 + pitch * (k + 0.5), 102]], [4.3, 4.3], 12);
+    box('/Ala/Calorifero_Camera_Collettore_Basso', C.white, cx - 4.5, y0, 8, cx + 4.5, y0 + w, 14);
+    box('/Ala/Calorifero_Camera_Collettore_Alto', C.white, cx - 4.5, y0, 100, cx + 4.5, y0 + w, 106);
+  }
+  box('/Ala/Tramezzo_Letto_Architrave', C.est, XT, d0, 255, XT + 15, d1, H);                     // porta con sopraluce: vano fino a 255
+  box('/Ala/Tramezzo_Letto_Sopraluce', C.glass, XT + 6, d0 + 4, 212, XT + 9, d1 - 4, 252);          // sopraluce vetrato
+  stipiteY('/Ala/Tramezzo_Letto_Stipite', XT, XT + 15, d0, d1, 210);
 }
 { // tramezzo del WC piccolo con vano 70 x 210 spostato a destra/est (dalla foto, stima, solo stipite)
   const y0 = 623 + DY, y1 = 634 + DY;
-  box('/Ala/Tramezzo_WC_A', C.est, -25, y0, 0, 112, y1, H);
-  box('/Ala/Tramezzo_WC_B', C.est, 182, y0, 0, 190, y1, H);
-  box('/Ala/Tramezzo_WC_Architrave', C.est, 112, y0, 210, 182, y1, H);
-  stipiteX('/Ala/Tramezzo_WC_Stipite', 112, 182, y0, y1);
+  box('/Ala/Tramezzo_WC_A', C.est, -25, y0, 0, XT - 78, y1, H);
+  box('/Ala/Tramezzo_WC_B', C.est, XT - 8, y0, 0, XT, y1, H);
+  box('/Ala/Tramezzo_WC_Architrave', C.est, XT - 78, y0, 210, XT - 8, y1, H);
+  stipiteX('/Ala/Tramezzo_WC_Stipite', XT - 78, XT - 8, y0, y1);
   // attacchi del WC piccolo (stima dalle foto 33 e 34): water e bidet verso la finestra (ovest), lavabo sul muro est
   const WCW = [80, 130, 210, 255], WHW = [200, 70, 60, 255], WDR = [150, 150, 155, 255];
   group('attacchi-wc-piccolo', () => box('/Ala/WCp_Placca_Scarico', [240, 235, 215, 255], 43, L(55) - 3, 100, 68, L(55), 125));        // placca di scarico sulla parete di fondo, ~25 x 25
@@ -361,15 +366,15 @@ box('/Letto1/Architrave_Finestra', C.est, 189, yW0, 250, 309, yW1, H);   // port
   group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Bidet_Acqua_Fredda', WCW, [[2, L(2), 22], [2, L(2) - 4, 22]], [1, 1]));
   group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Bidet_Acqua_Calda', WHW, [[14, L(14), 22], [14, L(14) - 4, 22]], [1, 1]));
   group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Bidet_Scarico', WDR, [[8, L(8) - 25, 0], [8, L(8) - 25, 10]], [2.5, 2.5]));
-  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Acqua_Fredda', WCW, [[190, 784, 52], [185, 784, 52]], [1, 1]));
-  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Acqua_Calda', WHW, [[190, 796, 52], [185, 796, 52]], [1, 1]));
-  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Scarico', WDR, [[190, 790, 45], [184, 790, 45]], [2, 2]));
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Acqua_Fredda', WCW, [[XT, 784, 52], [XT - 5, 784, 52]], [1, 1]));
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Acqua_Calda', WHW, [[XT, 796, 52], [XT - 5, 796, 52]], [1, 1]));
+  group('attacchi-wc-piccolo', () => tube('/Ala/WCp_Lavabo_Scarico', WDR, [[XT, 790, 45], [XT - 6, 790, 45]], [2, 2]));
 }
 
 
 // ---------- arredi (gruppi) ----------
 require('./wc-grande.js')({ box, tube, rbox, slab, tray, group });
-require('./wc-piccolo.js')({ box, tube, rbox, slab, tray, group, L });
+require('./wc-piccolo.js')({ box, tube, rbox, slab, tray, group, L, XT });
 require('./cucina-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v3.js')({ box, tube, rbox, slab, group, n: yT0 });
@@ -391,6 +396,7 @@ require('./parete-testata.js')({ box, group });
 require('./mensole-testata.js')({ box, tube, rbox, group });
 require('./besta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./porta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./camera-nord.js')({ box, tube, rbox, slab, group, L });
 
 // ---------- scena ----------
 const scene = {

@@ -5,7 +5,7 @@ module.exports = function tvCamera({ box, tube, rbox, slab, group, n }) {
   const P = '/TVCamera/';
   const XW = 31, YC = -331, TW = 95.3, TH = 53.6, ZC = 125;
   const y0 = YC - TW / 2, y1 = YC + TW / 2, z0 = ZC - TH / 2, z1 = ZC + TH / 2;
-  group('tv-camera', () => {
+  group('armadio-v2', () => {
     rbox(P + 'TV_Corpo', [26, 28, 32, 255], [XW, y0, z0, XW + 4.5, y1, z1], 0.8, 0.4);
     box(P + 'TV_Schermo', [16, 18, 24, 255], XW + 4.4, y0 + 1.2, z0 + 1.2, XW + 4.6, y1 - 1.2, z1 - 1.2);
     box(P + 'TV_Staffa', [50, 52, 56, 255], XW - 0.01, YC - 8, ZC - 8, XW + 0.5, YC + 8, ZC + 8);

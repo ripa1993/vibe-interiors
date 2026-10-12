@@ -3,11 +3,12 @@
 //  - muro nord (obliquo, 13 gradi), da sinistra (ovest) a destra: BIDET (mandate a x 2 e 14, scarico a y L-25) poi WATER (placca incassata x 43..68, scarico a y L-14).
 //    Il muro e' inclinato: i due sanitari sono ruotati di 13 gradi con la schiena sul muro (poligoni `slab` in pianta, il viewer non ruota) e la loro linea
 //    centrale passa per lo scarico esistente. La tazza resta a ~25 cm dal tramezzo.
-//  - muro est (x 190): lavabo piccolo "da hotel" con colonna (mandate z 52 a y 784/796, scarico z 45 a y 790 nascosti dalla colonna), specchio tondo con cornice
+//  - muro est (x 190 - 17 = 173, spostato): lavabo piccolo "da hotel" con colonna (mandate z 52 a y 784/796, scarico z 45 a y 790 nascosti dalla colonna), specchio tondo con cornice
 //    in ottone e asciugamani da ospiti su un gancio.
 //  - decorazioni minime: stampa sul tramezzo (di fronte al water), piantina sul davanzale della finestra, portarotolo.
 // Misure in cm.
-module.exports = function wcPiccolo({ box, tube, rbox, slab, tray, group, L }) {
+module.exports = function wcPiccolo({ box, tube, rbox, slab, tray, group, L, XT }) {
+  const DX = XT - 190;                                           // il muro est del WC e' stato spostato: il lavabo segue (era x 190)
   const P = '/WCPiccolo/';
   const CER = [248, 248, 246, 255], WHT = [242, 242, 240, 255], CHR = [200, 202, 206, 255], BRS = [190, 156, 96, 255], OAK = [200, 164, 116, 255];
   const rr = (x0, y0, x1, y1, r, seg = 4) => {
@@ -41,17 +42,17 @@ module.exports = function wcPiccolo({ box, tube, rbox, slab, tray, group, L }) {
     tube(P + 'Portarotolo_Asta', CHR, [[ox + 1 * N[0], oy + 1 * N[1], 68], [cx + 6 * T[0], cy + 6 * T[1], 68]], [0.5, 0.5], 6);
 
     // ---------- lavabo piccolo da hotel sul muro est (45 x 32, colonna, rubinetto monoforo), mandate z 52 e scarico z 45 dietro la colonna ----------
-    slab(P + 'Lavabo_Bacino', CER, rr(158, 767.5, 190, 812.5, 7), 76, 84, [rr(162, 772, 186, 808, 9)]);
-    tray(P + 'Lavabo_Vasca', CER, rr(162.2, 772.2, 185.8, 807.8, 8.8), 78.5, 84);
-    tube(P + 'Lavabo_Colonna', CER, [[179, 790, 0], [179, 790, 76]], [8, 5], 20);
-    tube(P + 'Lavabo_Rubinetto', CHR, [[186.5, 790, 84], [186.5, 790, 94], [182.5, 790, 96.5]], [1.6, 1.2, 1.0], 10);
-    tube(P + 'Lavabo_Sapone', [225, 232, 236, 255], [[188, 777, 84], [188, 777, 91]], [1.8, 1.8], 12);
+    slab(P + 'Lavabo_Bacino', CER, rr(158 + DX, 767.5, 190 + DX, 812.5, 7), 76, 84, [rr(162 + DX, 772, 186 + DX, 808, 9)]);
+    tray(P + 'Lavabo_Vasca', CER, rr(162.2 + DX, 772.2, 185.8 + DX, 807.8, 8.8), 78.5, 84);
+    tube(P + 'Lavabo_Colonna', CER, [[179 + DX, 790, 0], [179 + DX, 790, 76]], [8, 5], 20);
+    tube(P + 'Lavabo_Rubinetto', CHR, [[186.5 + DX, 790, 84], [186.5 + DX, 790, 94], [182.5 + DX, 790, 96.5]], [1.6, 1.2, 1.0], 10);
+    tube(P + 'Lavabo_Sapone', [225, 232, 236, 255], [[188 + DX, 777, 84], [188 + DX, 777, 91]], [1.8, 1.8], 12);
     // specchio tondo con cornice in ottone, 2 asciugamani ospiti su un gancio
-    tube(P + 'Specchio_Cornice', BRS, [[190, 790, 140], [188.8, 790, 140]], [23.6, 23.6], 36);
-    tube(P + 'Specchio', [190, 208, 218, 255], [[188.8, 790, 140], [188.4, 790, 140]], [22, 22], 36);
-    tube(P + 'Gancio_Asciugamano', BRS, [[190, 826, 118], [186.5, 826, 118]], [0.9, 0.9], 8);
-    box(P + 'Asciugamano_Ospiti', [236, 238, 236, 255], 187.5, 819, 80, 189.5, 833, 118);
-    box(P + 'Asciugamano_Ospiti_Riga', [170, 188, 168, 255], 187.4, 819, 88, 189.6, 833, 92);
+    tube(P + 'Specchio_Cornice', BRS, [[190 + DX, 790, 140], [188.8 + DX, 790, 140]], [23.6, 23.6], 36);
+    tube(P + 'Specchio', [190, 208, 218, 255], [[188.8 + DX, 790, 140], [188.4 + DX, 790, 140]], [22, 22], 36);
+    tube(P + 'Gancio_Asciugamano', BRS, [[190 + DX, 826, 118], [186.5 + DX, 826, 118]], [0.9, 0.9], 8);
+    box(P + 'Asciugamano_Ospiti', [236, 238, 236, 255], 187.5 + DX, 819, 80, 189.5 + DX, 833, 118);
+    box(P + 'Asciugamano_Ospiti_Riga', [170, 188, 168, 255], 187.4 + DX, 819, 88, 189.6 + DX, 833, 92);
 
     // ---------- decorazioni minime ----------
     const { pot, plant, frame, GRN2 } = require('./decor.js')({ box, tube, P });

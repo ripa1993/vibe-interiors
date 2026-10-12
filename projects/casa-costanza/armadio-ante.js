@@ -8,7 +8,7 @@ module.exports = function armadioAnte({ box, tube, rbox, slab, group, n }) {
   const XF = 31 + 58;                                  // fronte dei PAX
   const Z0 = 4, Z1 = 200, F = 1.8;                     // ante: altezza 196, cornice 1,8
 
-  group('armadio-ante', () => {
+  group('armadio-v2', () => {
     for (const [pn, y0] of [['S', -521], ['N', -241]]) {                     // i due PAX da 100: sud (y -521..-421) e nord (y -241..-141)
       for (let k = 0; k < 2; k++) {
         const a0 = y0 + k * 50 + 0.15, a1 = y0 + (k + 1) * 50 - 0.15, Q = P + pn + k + '_';

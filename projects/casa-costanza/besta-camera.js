@@ -19,7 +19,7 @@ module.exports = function bestaCamera({ box, tube, rbox, slab, group, n }) {
       box(Q + 'Anta_' + k, GRN, X1 - 0.5, y0 + 0.2 + k * w + 0.15, z0 + 0.3, X1 + 1.3, y0 + 0.2 + (k + 1) * w - 0.15, z0 + h - 0.3);
   };
 
-  group('besta', () => {
+  group('armadio-v2', () => {
     const yA = -421, yB = -361, yC = -301;                                  // sud: -421..-361, centro: -361..-301, nord: -301..-241
     const Z = 32, H = 38;                                                  // tutti appesi: z 32..70
     // sud: un'anta

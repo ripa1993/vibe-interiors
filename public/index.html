@@ -284,8 +284,9 @@ function geometryFor(item) {
 }
 
 // groups: items may carry "g" (an id or a list of ids); an item with groups is drawn only when one of them is enabled. Items without "g" are always drawn.
-// Enabled groups live in the URL (?g=id1,id2); everything is off by default.
+// Enabled groups live in the URL (?g=id1,id2); off by default unless the group has "on": true (applied on first load when ?g is absent).
 const enabledGroups = new Set((new URLSearchParams(location.search).get('g') || '').split(',').filter(Boolean));
+let groupsInit = false;
 let groupDefs = [];                                               // [{ id, label, cat, variant }]
 let showRemoved = false;                                          // items named "...Rimosso..." are hidden by default
 function build(data) {
@@ -328,6 +329,7 @@ async function load() {
   try {
     const res = await fetch('scene.json?t=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
+    if (!groupsInit) { groupsInit = true; if (!new URLSearchParams(location.search).has('g')) for (const g of data.groups || []) if (g.on) enabledGroups.add(g.id); }   // default-on groups ("on": true in scene.json) only when the URL has no ?g
     current = data;
     build(data);
     if (firstLoad) { firstLoad = false; applyInitialView(data); }   // later reloads keep your orbit
