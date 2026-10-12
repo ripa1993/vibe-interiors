@@ -99,9 +99,9 @@ const T_ALA = 30;      // S  muri dell'ala in alto e muro sinistro WC
 
 // ---------- pavimento (contorno esterno dell'area rossa) ----------
 const L = x => (695 + DY) + 0.233 * (x + 25);            // linea interna del tetto obliquo (ala in alto)
-slab('/Piano/Pavimento', C.floor,
-  [[-412, -50], [-19, -50], [-19, -581], [480, -581], [480, L(480) + 30], [-55, L(-55) + 30],
-   [-55, 451 + DY], [-412, 451 + DY]], -10, 0);
+const FLOOR_POLY = [[-412, -50], [-19, -50], [-19, -581], [480, -581], [480, L(480) + 30], [-55, L(-55) + 30],
+   [-55, 451 + DY], [-412, 451 + DY]];
+slab('/Piano/Pavimento', C.floor, FLOOR_POLY, -10, 0);
 items[items.length - 1].tex = { url: 'textures/parquet-rovere.png', tile: 120 / 2.54 };   // parquet rovere a listoni (tile di 120 cm); il viewer lo mette sulle facce piane
 
 // ---------- SOGGIORNO 430 x 401, interno x 0..430, y 0..401 ----------
@@ -424,6 +424,6 @@ const scene = {
   camera: { eye: [700, -1500, 1200].map(inch), target: [34, 131 + DY / 2, 0].map(inch), up: [0, 0, 1], fov: 35 },
   items,
 };
-fs.writeFileSync(OUT, '{"units":"inches","camera":' + JSON.stringify(scene.camera) + ',"spawn":' + JSON.stringify(SPAWN) + ',"lights":' + JSON.stringify(lights) + ',"groups":' + JSON.stringify(GROUPS) + ',"items":[\n' +
+fs.writeFileSync(OUT, '{"units":"inches","camera":' + JSON.stringify(scene.camera) + ',"spawn":' + JSON.stringify(SPAWN) + ',"ceiling":' + JSON.stringify({ o: FLOOR_POLY.map(p => p.map(inch)), z: [inch(H), inch(H + 3)] }) + ',"lights":' + JSON.stringify(lights) + ',"groups":' + JSON.stringify(GROUPS) + ',"items":[\n' +
   items.map(i => JSON.stringify(i)).join(',\n') + '\n]}\n');
 console.log('items:', items.length, '->', OUT);

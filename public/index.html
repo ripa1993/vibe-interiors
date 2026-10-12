@@ -305,6 +305,7 @@ const enabledGroups = new Set((new URLSearchParams(location.search).get('g') || 
 let groupsInit = false;
 let groupDefs = [];                                               // [{ id, label, cat, variant }]
 let showRemoved = false;                                          // items named "...Rimosso..." are hidden by default
+let ceilingMesh = null;                                           // white ceiling (scene.json "ceiling": {o, z}), shown only in first person; outside `model` so presets/bounds ignore it
 let colliders = [];                                               // first-person walls/furniture, rebuilt with the meshes
 function addCollider(item) {                                      // only what can block a standing person: z between ~8" and ~62"
   const Z0 = 8, Z1 = 62;
@@ -340,6 +341,12 @@ function build(data) {
     const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20),
       new THREE.LineBasicMaterial({ color: 0x2a2d33 }));
     model.add(edges);
+  }
+  if (ceilingMesh) { scene.remove(ceilingMesh); ceilingMesh.geometry.dispose(); ceilingMesh = null; }
+  if (data.ceiling) {
+    ceilingMesh = new THREE.Mesh(slabGeometry({ o: data.ceiling.o, h: [], z: data.ceiling.z }), materialFor([250, 250, 248, 255]));
+    ceilingMesh.name = '__ceiling'; ceilingMesh.visible = !!fp;
+    scene.add(ceilingMesh);                              // no castShadow: the sun still reaches the rooms (the open top is how the model is normally viewed)
   }
   buildLights(data);
   applyNight();                                         // (rebuilds the path tracer scene too when Render is on)
@@ -405,6 +412,7 @@ function applyNight() {
   hemi.intensity = night ? 0.1 : 2.4;
   hemi.color.set(night ? 0x7a8cb8 : 0xffffff); hemi.groundColor.set(night ? 0x1c202a : 0xb4b8c0);
   sun.visible = !night;
+  if (ceilingMesh) { ceilingMesh.material.emissive.set(0xffffff); ceilingMesh.material.emissiveIntensity = night || rt.on ? 0 : 0.5; }   // keeps the white ceiling white in daylight (it only gets light from below otherwise)
   lightsGroup.visible = night;
   for (const m of emissiveMats) { m.emissiveIntensity = night ? 1.6 : 0; m.needsUpdate = true; }
   nightBtn.classList.toggle('active', night);
@@ -779,6 +787,7 @@ function enterFP() {
   controls.enabled = false; held.clear();
   camera.fov = 70; camera.updateProjectionMatrix();
   document.body.classList.add('fp'); fpbtn.classList.add('active');
+  if (ceilingMesh) { ceilingMesh.visible = true; if (rt.on) rtSetup(); }
   setParams({ fp: 1 }); fpPlace();
 }
 function exitFP() {
@@ -787,6 +796,7 @@ function exitFP() {
   controls.enabled = true;
   setCam(s.pos, s.target, s.fov);
   document.body.classList.remove('fp'); fpbtn.classList.remove('active');
+  if (ceilingMesh) { ceilingMesh.visible = false; if (rt.on) rtSetup(); }
   setParams({ fp: null });
 }
 window.fpState = () => fp;                               // debug / tests
