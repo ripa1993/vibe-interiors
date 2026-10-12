@@ -20,3 +20,6 @@ shot*.png
 # eventuali segreti
 .env
 .env.*
+
+# versione statica generata da `npm run build` (Cloudflare Pages la rigenera a ogni deploy)
+dist/
