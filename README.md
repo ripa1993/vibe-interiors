@@ -29,7 +29,7 @@ Il primo argomento è il file della scena, il secondo la porta (default 4173). P
 | Mostra/nascondi gli elementi "da rimuovere" | `R` (pulsante **Rimossi**) |
 
 - L'inquadratura sopravvive al ricaricamento tramite l'URL: `?view=Iso+2` oppure `?cam=ex,ey,ez,tx,ty,tz,fov` (valori in pollici).
-- I **gruppi** si accendono dal pannello, per categoria; lo stato è nell'URL (`?g=cucina-v1,bagno`). Due gruppi con la stessa `variant` si escludono a vicenda (ad esempio cucina v1 / v2), gli altri sono indipendenti.
+- I **gruppi** si accendono dal pannello, per categoria (il titolo di ogni categoria si apre e si chiude con un clic: `›` chiuso, `v` aperto); lo stato è nell'URL (`?g=cucina-v1,bagno`). Due gruppi con la stessa `variant` si escludono a vicenda (ad esempio cucina v1 / v2), gli altri sono indipendenti.
 - Gli oggetti il cui nome contiene `Rimosso` sono nascosti di default (stato "dopo i lavori"); il pulsante **Rimossi** li mostra, in arancio.
 - Passando il mouse su un oggetto si vedono nome e dimensioni.
 

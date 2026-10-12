@@ -27,6 +27,11 @@
   #groups.open { display: block; }
   #groups h4 { margin: 8px 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6a7080; }
   #groups h4:first-child { margin-top: 0; }
+  #groups h4.cat { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  #groups h4.cat:hover { color: #1f6feb; }
+  #groups h4.cat .chev { display: inline-block; width: 10px; transition: transform .12s; font-size: 14px; line-height: 1; }
+  #groups h4.cat.open .chev { transform: rotate(90deg); }
+  #groups h4.cat .cnt { margin-left: auto; font-weight: 400; letter-spacing: 0; text-transform: none; color: #1f6feb; }
   #groups label { display: flex; gap: 6px; align-items: center; padding: 2px 0; cursor: pointer; }
   #groups .acts { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e3e5ea; }
   #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
@@ -485,6 +490,9 @@ function groupsChanged() {
   if (current) { build(current); refreshDims(); }
   renderGroups(current);
 }
+let collapsedCats = new Set();                            // categorie chiuse nel pannello Gruppi (ricordate per questo browser)
+try { collapsedCats = new Set(JSON.parse(localStorage.getItem('collapsedCats') || '[]')); } catch (e) {}
+function saveCollapsed() { try { localStorage.setItem('collapsedCats', JSON.stringify([...collapsedCats])); } catch (e) {} }
 function renderGroups(data) {
   if (!data) return;
   groupDefs = computeGroupDefs(data);
@@ -495,8 +503,16 @@ function renderGroups(data) {
   groupsEl.innerHTML = '';
   const cats = [...new Set(groupDefs.map(d => d.cat))];
   for (const cat of cats) {
-    const h = document.createElement('h4'); h.textContent = cat; groupsEl.appendChild(h);
-    for (const d of groupDefs.filter(x => x.cat === cat)) {
+    const inCat = groupDefs.filter(x => x.cat === cat), isOpen = !collapsedCats.has(cat);
+    const h = document.createElement('h4'); h.className = 'cat' + (isOpen ? ' open' : '');   // titolo cliccabile: > chiuso, v aperto
+    const chev = document.createElement('span'); chev.className = 'chev'; chev.textContent = '›';
+    h.append(chev, cat);
+    const nOn = inCat.filter(d => enabledGroups.has(d.id)).length;
+    if (!isOpen && nOn) { const c = document.createElement('span'); c.className = 'cnt'; c.textContent = nOn + ' on'; h.appendChild(c); }
+    h.onclick = () => { collapsedCats.has(cat) ? collapsedCats.delete(cat) : collapsedCats.add(cat); saveCollapsed(); renderGroups(current); };
+    groupsEl.appendChild(h);
+    if (!isOpen) continue;
+    for (const d of inCat) {
       const l = document.createElement('label'), cb = document.createElement('input');
       cb.type = 'checkbox'; cb.checked = enabledGroups.has(d.id);
       cb.onchange = () => setGroup(d.id, cb.checked);
