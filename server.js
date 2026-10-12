@@ -35,6 +35,11 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/favicon.ico') return send(res, 204, 'image/x-icon', '');
   if (url.pathname === '/scene.json') return serveFile(res, SCENE);
+  if (url.pathname.startsWith('/vendor/')) {                       // path tracer (Render button): only the two packages it needs
+    const f = path.normalize(path.join(__dirname, 'node_modules', url.pathname.slice('/vendor/'.length)));
+    if (!/node_modules[\\/](three-gpu-pathtracer|three-mesh-bvh)[\\/]/.test(f)) return send(res, 403, 'text/plain', 'forbidden');
+    return serveFile(res, f);
+  }
   if (url.pathname.startsWith('/three/')) {
     const f = path.normalize(path.join(THREE, url.pathname.slice('/three/'.length)));
     if (!f.startsWith(THREE)) return send(res, 403, 'text/plain', 'forbidden');

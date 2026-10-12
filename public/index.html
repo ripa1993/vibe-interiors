@@ -18,6 +18,9 @@
   #zoom button { width: 28px; font-size: 16px; line-height: 1; padding: 3px 0; }
   #dimctl { display: flex; gap: 4px; margin-left: 6px; padding-left: 10px; border-left: 1px solid #d5d8de; }
   button.on { background: #d9480f; border-color: #d9480f; color: #fff; }
+  #aobtn.active { background: #4a4f5a; border-color: #4a4f5a; color: #fff; }
+  #rtbtn.active { background: #0d6e3a; border-color: #0d6e3a; color: #fff; }
+  #nightbtn.active { background: #1f2540; border-color: #1f2540; color: #ffd9a0; }
   #fpbtn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
   #fphint { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: none; z-index: 5; pointer-events: none;
             background: rgba(30,32,38,.85); color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
@@ -50,6 +53,9 @@
 <div id="view"></div>
 <div id="bar"><span id="dot"></span><span id="status">connecting…</span>
   <span id="views"></span>
+  <span id="aoctl"><button id="aobtn" title="Occlusione ambientale: ombre di contatto negli angoli (O)">AO</button></span>
+  <span id="rtctl"><button id="rtbtn" title="Render path tracing: luce globale, ombre morbide (T)">Render</button></span>
+  <span id="nightctl"><button id="nightbtn" title="Modalità notte: accende le luci (N)">Notte</button></span>
   <span id="fpctl"><button id="fpbtn" title="Prima persona: cammina nella casa (F)">Prima persona</button></span>
   <span id="zoom"><button id="zin" title="Zoom in (+)">+</button><button id="zout" title="Zoom out (−)">−</button></span>
   <span id="dimctl"><button id="dims" title="Show overall dimensions (M)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="gbtn" title="Show / hide groups of objects (G)">Gruppi</button><button id="removed" title="Hide / show items whose name contains &quot;Rimosso&quot; (R)">Rimossi</button></span></div>
@@ -58,7 +64,8 @@
 <div id="tip"></div>
 <div id="fphint">WASD / frecce: muovi · Q / E: ruota · click: guarda col mouse (di nuovo click per fermare) · Shift: corri · F / Esc: esci</div>
 <script type="importmap">
-{ "imports": { "three": "./three/build/three.module.js", "three/addons/": "./three/examples/jsm/" } }
+{ "imports": { "three": "./three/build/three.module.js", "three/addons/": "./three/examples/jsm/", "three/examples/jsm/": "./three/examples/jsm/",
+  "three-mesh-bvh": "./vendor/three-mesh-bvh/build/index.module.js", "three-gpu-pathtracer": "./vendor/three-gpu-pathtracer/build/index.module.js" } }
 </script>
 <script type="module">
 import * as THREE from 'three';
@@ -82,7 +89,8 @@ camera.up.set(0, 0, 1);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xb4b8c0, 2.4));
+const hemi = new THREE.HemisphereLight(0xffffff, 0xb4b8c0, 2.4);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffffff, 2.2);
 sun.position.set(-200, -150, 400);
 sun.castShadow = true;
@@ -102,6 +110,7 @@ function resize() {
   renderer.setSize(w, h);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  window.aoResize?.(w, h);                              // composer of the AO button (defined later)
 }
 addEventListener('resize', resize);
 resize();
@@ -131,6 +140,7 @@ function texturedSlabMaterials(item) {                   // item.tex = {url, til
   return [new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0.0 }), materialFor(item.c)];   // ExtrudeGeometry groups: 0 = caps, 1 = sides
 }
 
+const emissiveMats = [];                                 // items with "em": glow in night mode
 function materialFor(c) {
   const [r, g, b, a = 255] = c || [200, 200, 200, 255];
   return new THREE.MeshStandardMaterial({
@@ -315,12 +325,14 @@ function build(data) {
       for (const m of [].concat(n.material || [])) { m.map?.dispose(); m.dispose?.(); }
     });
   }
+  emissiveMats.length = 0;
   for (const item of data.items) {
     if (!showRemoved && item.n.includes('Rimosso')) continue;      // "after the works" state
     const gs = [].concat(item.g || []);
     if (gs.length && !gs.some(id => enabledGroups.has(id))) continue;   // group switched off
     const geo = geometryFor(item);
     const mesh = new THREE.Mesh(geo, item.tex && item.box ? texturedBoxMaterials(item) : item.tex && item.slab ? texturedSlabMaterials(item) : materialFor(item.c));
+    if (item.em) for (const m of [].concat(mesh.material)) { m.emissive = m.color.clone(); emissiveMats.push(m); }
     mesh.name = item.n;
     mesh.castShadow = mesh.receiveShadow = true;
     model.add(mesh);
@@ -329,6 +341,8 @@ function build(data) {
       new THREE.LineBasicMaterial({ color: 0x2a2d33 }));
     model.add(edges);
   }
+  buildLights(data);
+  applyNight();                                         // (rebuilds the path tracer scene too when Render is on)
   const box = new THREE.Box3().setFromObject(model);
   const c = box.getCenter(new THREE.Vector3());
   sun.target.position.copy(c);
@@ -351,12 +365,131 @@ async function load() {
     if (!groupsInit) { groupsInit = true; if (!new URLSearchParams(location.search).has('g')) for (const g of data.groups || []) if (g.on) enabledGroups.add(g.id); }   // default-on groups ("on": true in scene.json) only when the URL has no ?g
     current = data;
     build(data);
-    if (firstLoad) { firstLoad = false; applyInitialView(data); if (new URLSearchParams(location.search).has('fp')) enterFP(); }   // later reloads keep your orbit
+    if (firstLoad) { firstLoad = false; applyInitialView(data); if (new URLSearchParams(location.search).has('fp')) enterFP(); if (new URLSearchParams(location.search).has('rt')) rtOn(); if (new URLSearchParams(location.search).has('ao')) aoOn(); }   // later reloads keep your orbit
     status.textContent = `${data.items.length} objects · ${new Date().toLocaleTimeString()}`;
   } catch (e) {
     console.error('scene load failed:', e);
     status.textContent = 'waiting for valid scene.json…';
   }
+}
+
+
+// ---- night mode (key N, ?night=1): daylight off, the "lights" of scene.json on (spot lights, optional shadows), items with "em" glow ----
+// lights: [{ t:'spot', p:[x,y,z], d:[dx,dy,dz] (aim, default down), a: half-angle deg, pen: penumbra 0..1, c:[r,g,b], i: intensity, r: range (0 = unlimited), sh: 1 = casts shadows, g: group id }]
+// A light follows its group like items do. Keep shadow casters to ~12 (each takes one texture unit).
+const lightsGroup = new THREE.Group();
+scene.add(lightsGroup);
+let night = new URLSearchParams(location.search).has('night');
+const rt = { on: false, pt: null, busy: false, mod: null, env: null, last: '' };   // path tracing (Render button)
+const RT_K = 110;
+const nightBtn = document.getElementById('nightbtn');
+function buildLights(data) {
+  for (const o of [...lightsGroup.children]) { lightsGroup.remove(o); o.dispose?.(); }
+  for (const L of data.lights || []) {
+    const gs = [].concat(L.g || []);
+    if (gs.length && !gs.some(id => enabledGroups.has(id))) continue;
+    const col = new THREE.Color(...(L.c || [255, 255, 255]).map(v => v / 255)).convertSRGBToLinear();
+    const sl = new THREE.SpotLight(col, (L.i ?? 200) * (rt.on ? RT_K : 1), L.r || 0, (L.a ?? 60) * Math.PI / 180, L.pen ?? 0.5, rt.on ? 2 : 1);   // path tracer: physical decay 2, intensity scaled so a room looks as bright as in the raster view
+    sl.position.set(...L.p);
+    const d = new THREE.Vector3(...(L.d || [0, 0, -1])).normalize();
+    sl.target.position.copy(sl.position).addScaledVector(d, 100);
+    if (L.sh) {
+      sl.castShadow = true; sl.shadow.mapSize.set(1024, 1024);
+      sl.shadow.bias = -0.0005; sl.shadow.normalBias = 0.6; sl.shadow.camera.near = 2; sl.shadow.camera.far = 900;
+    }
+    lightsGroup.add(sl, sl.target);
+  }
+}
+function applyNight() {
+  scene.background.set(night ? 0x0a0c12 : 0xf4f5f7);
+  hemi.intensity = night ? 0.1 : 2.4;
+  hemi.color.set(night ? 0x7a8cb8 : 0xffffff); hemi.groundColor.set(night ? 0x1c202a : 0xb4b8c0);
+  sun.visible = !night;
+  lightsGroup.visible = night;
+  for (const m of emissiveMats) { m.emissiveIntensity = night ? 1.6 : 0; m.needsUpdate = true; }
+  nightBtn.classList.toggle('active', night);
+  if (rt.on) rtSetup();
+}
+nightBtn.onclick = () => { night = !night; applyNight(); setParams({ night: night ? 1 : null }); };
+
+// ---- AO button (key O, ?ao=1): screen-space ambient occlusion (GTAO) on the raster view: soft contact shadows in corners, under furniture. The path tracer has it built in.
+const aoBtn = document.getElementById('aobtn');
+const ao = { on: false, composer: null, pass: null };
+window.aoResize = (w, h) => ao.composer?.setSize(w, h);
+async function aoOn() {
+  aoBtn.textContent = 'AO…';
+  try {
+    if (!ao.composer) {
+      const [{ EffectComposer }, { RenderPass }, { GTAOPass }, { OutputPass }] = await Promise.all([
+        import('three/addons/postprocessing/EffectComposer.js'), import('three/addons/postprocessing/RenderPass.js'),
+        import('three/addons/postprocessing/GTAOPass.js'), import('three/addons/postprocessing/OutputPass.js')]);
+      const w = view.clientWidth, h = view.clientHeight;
+      const rtg = new THREE.WebGLRenderTarget(w * renderer.getPixelRatio(), h * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: 4 });   // MSAA: the composer's targets don't inherit the canvas antialiasing
+      ao.composer = new EffectComposer(renderer, rtg);
+      ao.composer.addPass(new RenderPass(scene, camera));
+      ao.pass = new GTAOPass(scene, camera, w, h);
+      ao.pass.output = GTAOPass.OUTPUT.Default;
+      ao.pass.blendIntensity = 1;
+      ao.pass.updateGtaoMaterial({ radius: 16, distanceExponent: 1.2, thickness: 4, scale: 1.2, samples: 16, distanceFallOff: 1, screenSpaceRadius: false });   // scene units are inches: 16" = 40 cm
+      ao.pass.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, radiusExponent: 1, rings: 2, samples: 16 });
+      ao.composer.addPass(ao.pass);
+      ao.composer.addPass(new OutputPass());
+      ao.composer.setPixelRatio(renderer.getPixelRatio()); ao.composer.setSize(w, h);
+    }
+  } catch (e) { console.error('AO not available:', e); aoBtn.textContent = 'AO'; return; }
+  ao.on = true; aoBtn.textContent = 'AO'; aoBtn.classList.add('active'); setParams({ ao: 1 });
+}
+function aoOff() { ao.on = false; aoBtn.classList.remove('active'); setParams({ ao: null }); }
+aoBtn.onclick = () => ao.on ? aoOff() : aoOn();
+
+// ---- Render button (key T, ?rt=1): progressive GPU path tracing (three-gpu-pathtracer, loaded on demand): global illumination, soft shadows, light bouncing off walls.
+// The raster view is what you edit in; this is for judging the lights. Needs a real GPU. The accumulated image restarts when the camera, scene, lights or night mode change.
+const rtBtn = document.getElementById('rtbtn');
+let rtTimer = null;
+async function rtSetup() {                              // (re)build the BVH from the current scene; debounced because group toggles / reloads come in bursts
+  clearTimeout(rtTimer);
+  rtTimer = setTimeout(async () => {
+    if (!rt.on || rt.busy) { if (rt.on) rtSetup(); return; }
+    rt.busy = true; rtBtn.textContent = 'Render…';
+    try {
+      hemi.visible = false;                              // the path tracer ignores it: sky light comes from the environment instead
+      const G = rt.mod.GradientEquirectTexture;
+      rt.env = rt.env || new G(64);
+      rt.env.topColor.set(night ? 0x1a2036 : 0xbcd2f0); rt.env.bottomColor.set(night ? 0x0a0c12 : 0xd9dadc); rt.env.update();
+      scene.environment = rt.env; scene.environmentIntensity = night ? 0.15 : 1.1;
+      rt.pt.setScene(scene, camera);                     // synchronous BVH build: freezes the page for a few seconds on a big scene (the async build needs a worker)
+      rt.last = '';
+    } catch (e) { console.error('path tracer setup failed:', e); rtOff(); }
+    rt.busy = false;
+  }, 300);
+}
+async function rtOn() {
+  rtBtn.textContent = 'Render…';
+  try {
+    rt.mod = rt.mod || await import('three-gpu-pathtracer');
+    if (!rt.pt) {
+      rt.pt = new rt.mod.WebGLPathTracer(renderer);
+      Object.assign(rt.pt, { bounces: 5, renderScale: 0.6, dynamicLowRes: true, lowResScale: 0.25, filterGlossyFactor: 0.5, minSamples: 3, fadeDuration: 300, renderDelay: 50 });
+    }
+  } catch (e) { console.error('path tracer not available:', e); rtBtn.textContent = 'Render'; return; }
+  rt.on = true; rtBtn.classList.add('active'); setParams({ rt: 1 });
+  buildLights(current); applyNight();                     // lights with path-tracer intensity / decay (applyNight triggers rtSetup)
+}
+function rtOff() {
+  rt.on = false; rtBtn.classList.remove('active'); rtBtn.textContent = 'Render'; setParams({ rt: null });
+  scene.environment = null; hemi.visible = true;
+  if (current) buildLights(current);
+  applyNight();
+}
+rtBtn.onclick = () => rt.on ? rtOff() : rtOn();
+function rtFrame() {                                    // one animation frame in path-tracing mode; false = not ready, fall back to raster
+  if (!rt.on || !rt.pt || rt.busy) return false;
+  camera.updateMatrixWorld();
+  const key = [...camera.position.toArray(), ...camera.quaternion.toArray(), camera.fov, view.clientWidth].map(v => +v.toFixed(3)).join(',');   // rounded: OrbitControls damping jitters at 1e-7 every frame, which would reset the accumulation forever
+  if (key !== rt.last) { rt.last = key; rt.pt.updateCamera(); }
+  rt.pt.renderSample();
+  if ((rt.tick = (rt.tick || 0) + 1) % 15 === 0) rtBtn.textContent = 'Render · ' + Math.floor(rt.pt.samples);
+  return true;
 }
 
 // ---- camera presets (computed from the model's bounding box, so they follow the geometry) ----
@@ -719,6 +852,9 @@ addEventListener('keyup', e => {
 });
 addEventListener('blur', () => held.clear());
 addEventListener('keydown', e => {
+  if (e.key === 'o' || e.key === 'O') return aoBtn.click();
+  if (e.key === 't' || e.key === 'T') return rtBtn.click();
+  if (e.key === 'n' || e.key === 'N') return nightBtn.click();
   if (e.key === 'f' || e.key === 'F') return fpbtn.click();
   if (e.key === 'Escape') return exitFP();
   if (fp && /^[1-9+=_-]$/.test(e.key)) { if (/\d/.test(e.key)) exitFP(); else return; }
@@ -744,7 +880,8 @@ if (!window.STATIC_BUILD) {                              // versione statica (Cl
 
 load();
 renderer.setAnimationLoop(now => { stepMove(now); if (!fp) controls.update();   // in first person OrbitControls would re-aim the camera at its target
-   renderer.render(scene, camera); placeLabels(); });
+   if (!rtFrame()) { if (ao.on && ao.composer) ao.composer.render(); else renderer.render(scene, camera); }
+   placeLabels(); });
 </script>
 </body>
 </html>

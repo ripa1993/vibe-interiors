@@ -26,6 +26,8 @@ const items = [];
 const GROUPS = [];
 const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'antibagno-scarpiera', 'antibagno-elvarli', 'ingresso-attaccapanni', 'ingresso-stampe-mensola', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord', 'soggiorno-billy', 'ripostiglio-stagione', 'ripostiglio-pulizia', 'luci'];   // accesi al caricamento del viewer
 const defGroup = (id, label, cat, variant) => GROUPS.push(Object.assign({ id, label, cat }, variant ? { variant } : {}, DEFAULT_ON.includes(id) ? { on: true } : {}));
+const lights = [];                                                  // sorgenti per la modalita' notte del viewer (cm -> pollici); vedi luci.js
+const light = d => lights.push(Object.assign({ t: 'spot', g: 'luci' }, d, { p: d.p.map(v => +(v / 2.54).toFixed(3)) }));
 const group = (id, fn) => { const from = items.length; fn(); for (let k = from; k < items.length; k++) items[k].g = id; };
 defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
 defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
@@ -408,7 +410,8 @@ require('./besta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./porta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./billy-soggiorno.js')({ box, tube, group });
 require('./ripostigli.js')({ box, tube, rbox, group });
-require('./luci.js')({ box, tube, group, L });
+for (const i of items) if (i.n === '/RipStagione/Luce' || i.n === '/RipPulizia/Luce') i.em = 1;   // barre LED luminose in modalita' notte
+require('./luci.js')({ box, tube, group, L, items, light });
 require('./camera-nord.js')({ box, tube, rbox, slab, group, L });
 require('./scarpiera-antibagno.js')({ box, tube, group });
 require('./armadio-elvarli.js')({ box, tube, group });
@@ -421,6 +424,6 @@ const scene = {
   camera: { eye: [700, -1500, 1200].map(inch), target: [34, 131 + DY / 2, 0].map(inch), up: [0, 0, 1], fov: 35 },
   items,
 };
-fs.writeFileSync(OUT, '{"units":"inches","camera":' + JSON.stringify(scene.camera) + ',"spawn":' + JSON.stringify(SPAWN) + ',"groups":' + JSON.stringify(GROUPS) + ',"items":[\n' +
+fs.writeFileSync(OUT, '{"units":"inches","camera":' + JSON.stringify(scene.camera) + ',"spawn":' + JSON.stringify(SPAWN) + ',"lights":' + JSON.stringify(lights) + ',"groups":' + JSON.stringify(GROUPS) + ',"items":[\n' +
   items.map(i => JSON.stringify(i)).join(',\n') + '\n]}\n');
 console.log('items:', items.length, '->', OUT);

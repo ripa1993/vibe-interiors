@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<script>window.STATIC_BUILD = true;</script>
+<title>SKP Watch</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #f4f5f7; font: 13px -apple-system, system-ui, sans-serif; }
+  #view { position: fixed; inset: 0; }
+  #bar { position: fixed; top: 10px; left: 10px; display: flex; gap: 8px; align-items: center;
+         background: rgba(255,255,255,.9); border: 1px solid #d5d8de; border-radius: 8px; padding: 6px 10px; }
+  #bar { z-index: 5; }
+  #dot { width: 9px; height: 9px; border-radius: 50%; background: #bbb; }
+  #dot.live { background: #2ba84a; }
+  #dot.flash { background: #f2a900; }
+  #views, #zoom { display: flex; gap: 4px; flex-wrap: wrap; }
+  #zoom { margin-left: 6px; padding-left: 10px; border-left: 1px solid #d5d8de; }
+  #zoom button { width: 28px; font-size: 16px; line-height: 1; padding: 3px 0; }
+  #dimctl { display: flex; gap: 4px; margin-left: 6px; padding-left: 10px; border-left: 1px solid #d5d8de; }
+  button.on { background: #d9480f; border-color: #d9480f; color: #fff; }
+  #aobtn.active { background: #4a4f5a; border-color: #4a4f5a; color: #fff; }
+  #rtbtn.active { background: #0d6e3a; border-color: #0d6e3a; color: #fff; }
+  #nightbtn.active { background: #1f2540; border-color: #1f2540; color: #ffd9a0; }
+  #fpbtn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  #fphint { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: none; z-index: 5; pointer-events: none;
+            background: rgba(30,32,38,.85); color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+  body.fp #fphint { display: block; } body.fp #view { cursor: pointer; } body.look #view { cursor: none; }
+  #views button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  #gbtn { display: none; }
+  #gbtn.has { display: inline-block; }
+  #gbtn.open:not(.on) { border-color: #1f6feb; color: #1f6feb; }       /* panel open, no group on: blue; groups on: orange (button.on) */
+  #groups { position: fixed; left: 10px; bottom: 10px; z-index: 5; display: none; max-height: 62vh; overflow: auto; min-width: 210px;
+            background: rgba(255,255,255,.95); border: 1px solid #d5d8de; border-radius: 8px; padding: 8px 10px; }
+  #groups.open { display: block; }
+  #groups h4 { margin: 8px 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6a7080; }
+  #groups h4:first-child { margin-top: 0; }
+  #groups h4.cat { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  #groups h4.cat:hover { color: #1f6feb; }
+  #groups h4.cat .chev { display: inline-block; width: 10px; transition: transform .12s; font-size: 14px; line-height: 1; }
+  #groups h4.cat.open .chev { transform: rotate(90deg); }
+  #groups h4.cat .cnt { margin-left: auto; font-weight: 400; letter-spacing: 0; text-transform: none; color: #1f6feb; }
+  #groups label { display: flex; gap: 6px; align-items: center; padding: 2px 0; cursor: pointer; }
+  #groups .acts { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e3e5ea; }
+  #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .dim { position: absolute; transform: translate(-50%, -50%); background: #fff; color: #b8400c; border: 1px solid #d9480f;
+         border-radius: 4px; padding: 1px 5px; font-weight: 600; white-space: nowrap; }
+  #tip { position: fixed; display: none; pointer-events: none; background: rgba(30,32,38,.92); color: #fff;
+         border-radius: 6px; padding: 5px 8px; font-size: 12px; line-height: 1.35; }
+  button { font: inherit; border: 1px solid #c3c7cf; background: #fff; border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div id="bar"><span id="dot"></span><span id="status">connecting…</span>
+  <span id="views"></span>
+  <span id="aoctl"><button id="aobtn" title="Occlusione ambientale: ombre di contatto negli angoli (O)">AO</button></span>
+  <span id="rtctl"><button id="rtbtn" title="Render path tracing: luce globale, ombre morbide (T)">Render</button></span>
+  <span id="nightctl"><button id="nightbtn" title="Modalità notte: accende le luci (N)">Notte</button></span>
+  <span id="fpctl"><button id="fpbtn" title="Prima persona: cammina nella casa (F)">Prima persona</button></span>
+  <span id="zoom"><button id="zin" title="Zoom in (+)">+</button><button id="zout" title="Zoom out (−)">−</button></span>
+  <span id="dimctl"><button id="dims" title="Show overall dimensions (M)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="gbtn" title="Show / hide groups of objects (G)">Gruppi</button><button id="removed" title="Hide / show items whose name contains &quot;Rimosso&quot; (R)">Rimossi</button></span></div>
+<div id="groups"></div>
+<div id="labels"></div>
+<div id="tip"></div>
+<div id="fphint">WASD / frecce: muovi · Q / E: ruota · click: guarda col mouse (di nuovo click per fermare) · Shift: corri · F / Esc: esci</div>
+<script type="importmap">
+{ "imports": { "three": "./three/build/three.module.js", "three/addons/": "./three/examples/jsm/", "three/examples/jsm/": "./three/examples/jsm/",
+  "three-mesh-bvh": "./vendor/three-mesh-bvh/build/index.module.js", "three-gpu-pathtracer": "./vendor/three-gpu-pathtracer/build/index.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const view = document.getElementById('view');
+const dot = document.getElementById('dot');
+const status = document.getElementById('status');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+renderer.shadowMap.enabled = true;
+view.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf4f5f7);
+THREE.Object3D.DEFAULT_UP.set(0, 0, 1);              // SketchUp is Z-up
+
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+camera.up.set(0, 0, 1);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0xb4b8c0, 2.4);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(-200, -150, 400);
+sun.castShadow = true;
+sun.shadow.bias = -0.0005;
+sun.shadow.normalBias = 0.6;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -300, right: 300, top: 300, bottom: -300, near: 1, far: 1500 });
+scene.add(sun);
+
+const model = new THREE.Group();
+scene.add(model);
+let current = null;                                    // last loaded scene JSON
+let firstLoad = true;
+
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  window.aoResize?.(w, h);                              // composer of the AO button (defined later)
+}
+addEventListener('resize', resize);
+resize();
+
+const textureLoader = new THREE.TextureLoader();
+const FACE_INDEX = { '+x': 0, '-x': 1, '+y': 2, '-y': 3, '+z': 4, '-z': 5 };   // BoxGeometry material slots
+function texturedBoxMaterials(item) {                    // item.tex = {url, tile, face}: one textured face (tiles of `tile` inches), the rest plain
+  const { url, tile, face = '-y' } = item.tex;
+  const [x0, y0, z0, x1, y1, z1] = item.box;
+  const dims = { x: x1 - x0, y: y1 - y0, z: z1 - z0 };
+  const axes = { '-y': ['x', 'z'], '+y': ['x', 'z'], '-x': ['y', 'z'], '+x': ['y', 'z'], '-z': ['x', 'y'], '+z': ['x', 'y'] }[face];
+  const tex = textureLoader.load(url);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(dims[axes[0]] / tile, dims[axes[1]] / tile);
+  const mats = Array.from({ length: 6 }, () => materialFor(item.c));
+  mats[FACE_INDEX[face]] = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0.0 });
+  return mats;
+}
+
+function texturedSlabMaterials(item) {                   // item.tex = {url, tile} on a slab: the top/bottom caps use world x,y as UV (tiles of `tile` inches), the sides stay plain
+  const tex = textureLoader.load(item.tex.url);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.repeat.set(1 / item.tex.tile, 1 / item.tex.tile);
+  return [new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6, metalness: 0.0 }), materialFor(item.c)];   // ExtrudeGeometry groups: 0 = caps, 1 = sides
+}
+
+const emissiveMats = [];                                 // items with "em": glow in night mode
+function materialFor(c) {
+  const [r, g, b, a = 255] = c || [200, 200, 200, 255];
+  return new THREE.MeshStandardMaterial({
+    color: new THREE.Color(r / 255, g / 255, b / 255).convertSRGBToLinear(),
+    roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide,
+    transparent: a < 255, opacity: a / 255,
+  });
+}
+
+function tubeGeometry({ p, r, n }) {                     // circular section along a path, parallel-transported frames, smooth normals
+  const P = p.map(a => new THREE.Vector3(...a)), k = P.length;
+  const T = P.map((_, i) => P[Math.min(i + 1, k - 1)].clone().sub(P[Math.max(i - 1, 0)]).normalize());
+  const helper = Math.abs(T[0].x) < 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+  let e1 = new THREE.Vector3().crossVectors(T[0], helper).normalize();
+  const pos = [], nor = [], idx = [], ringStart = [];
+  for (let i = 0; i < k; i++) {
+    e1 = e1.clone().sub(T[i].clone().multiplyScalar(e1.dot(T[i]))).normalize();
+    const e2 = new THREE.Vector3().crossVectors(T[i], e1);
+    ringStart.push(pos.length / 3);
+    for (let j = 0; j < n; j++) {
+      const a = 2 * Math.PI * j / n, d = e1.clone().multiplyScalar(Math.cos(a)).add(e2.clone().multiplyScalar(Math.sin(a)));
+      pos.push(P[i].x + r[i] * d.x, P[i].y + r[i] * d.y, P[i].z + r[i] * d.z);
+      nor.push(d.x, d.y, d.z);
+    }
+  }
+  for (let i = 0; i < k - 1; i++) for (let j = 0; j < n; j++) {
+    const a = ringStart[i] + j, b = ringStart[i] + (j + 1) % n, c = ringStart[i + 1] + (j + 1) % n, d = ringStart[i + 1] + j;
+    idx.push(a, b, c, a, c, d);
+  }
+  const cap = (i, sign) => {                              // flat end cap with its own vertices (crisp edge)
+    const base = pos.length / 3;
+    pos.push(P[i].x, P[i].y, P[i].z); nor.push(T[i].x * sign, T[i].y * sign, T[i].z * sign);
+    for (let j = 0; j < n; j++) {
+      const s = ringStart[i] + j;
+      pos.push(pos[3 * s], pos[3 * s + 1], pos[3 * s + 2]); nor.push(T[i].x * sign, T[i].y * sign, T[i].z * sign);
+    }
+    for (let j = 0; j < n; j++) {
+      const a = base + 1 + j, b = base + 1 + (j + 1) % n;
+      if (sign > 0) idx.push(base, a, b); else idx.push(base, b, a);
+    }
+  };
+  cap(0, -1); cap(k - 1, 1);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+function roundedRectPts(x0, y0, x1, y1, r, seg = 4) {    // CCW outline, same construction as the SketchUp side
+  const pts = [];
+  for (const [cx, cy, a0] of [[x1 - r, y0 + r, -90], [x1 - r, y1 - r, 0], [x0 + r, y1 - r, 90], [x0 + r, y0 + r, 180]])
+    for (let k = 0; k <= seg; k++) {
+      const a = (a0 + 90 * k / seg) * Math.PI / 180;
+      pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+    }
+  return pts;
+}
+
+function slabGeometry({ o, h, z }) {                     // flat slab with holes, extruded along +Z
+  const shape = new THREE.Shape(o.map(p => new THREE.Vector2(p[0], p[1])));
+  shape.holes = h.map(hole => new THREE.Path(hole.map(p => new THREE.Vector2(p[0], p[1]))));
+  const g = new THREE.ExtrudeGeometry(shape, { depth: z[1] - z[0], bevelEnabled: false, curveSegments: 1 });
+  g.translate(0, 0, z[0]);
+  return g;
+}
+
+function trayGeometry({ o, z }) {                        // open-top tray: smooth inward walls + flat floor
+  const m = o.length, pos = [], nor = [], idx = [];
+  const inward = i => {                                  // inward normal of edge i -> i+1 (outline is CCW)
+    const a = o[i], b = o[(i + 1) % m], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    return [-dy / l, dx / l];
+  };
+  for (const zz of z) for (let i = 0; i < m; i++) {
+    const n1 = inward((i + m - 1) % m), n2 = inward(i);
+    let nx = n1[0] + n2[0], ny = n1[1] + n2[1]; const l = Math.hypot(nx, ny) || 1;
+    pos.push(o[i][0], o[i][1], zz); nor.push(nx / l, ny / l, 0);
+  }
+  for (let i = 0; i < m; i++) { const j = (i + 1) % m; idx.push(i, j, m + j, i, m + j, m + i); }
+  const base = pos.length / 3;
+  for (let i = 0; i < m; i++) { pos.push(o[i][0], o[i][1], z[0]); nor.push(0, 0, 1); }
+  for (let i = 1; i < m - 1; i++) idx.push(base, base + i, base + i + 1);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+function rboxGeometry({ b, r, top, bot = 0 }) {          // rounded box: filleted top edge, optional filleted bottom edge (retro appliance look)
+  const [x0, y0, z0, x1, y1, z1] = b;
+  const rings = [];
+  if (bot > 0) {
+    for (const deg of [90, 75, 60, 45, 30, 15]) {
+      const t = deg * Math.PI / 180;
+      rings.push([bot * (1 - Math.cos(t)), z0 + bot - bot * Math.sin(t)]);
+    }
+    rings.push([0, z0 + bot]);
+  } else rings.push([0, z0]);
+  rings.push([0, z1 - top]);
+  for (const deg of [15, 30, 45, 60, 75, 90]) {
+    const t = deg * Math.PI / 180;
+    rings.push([top * (1 - Math.cos(t)), z1 - top + top * Math.sin(t)]);
+  }
+  const pts = rings.map(([ins, zz]) => roundedRectPts(x0 + ins, y0 + ins, x1 - ins, y1 - ins, Math.max(r - ins, 0.05)).map(p => [p[0], p[1], zz]));
+  const m = pts[0].length, pos = [], idx = [];
+  pts.forEach(ring => ring.forEach(p => pos.push(...p)));
+  for (let i = 0; i < pts.length - 1; i++) for (let j = 0; j < m; j++) {
+    const j2 = (j + 1) % m, b0 = i * m + j, b1 = i * m + j2, t0 = (i + 1) * m + j, t1 = (i + 1) * m + j2;
+    idx.push(b0, b1, t1, b0, t1, t0);
+  }
+  const cap = (ring, flip) => {                          // flat caps get their own vertices -> crisp edge
+    const base = pos.length / 3;
+    ring.forEach(p => pos.push(...p));
+    for (let i = 1; i < m - 1; i++) flip ? idx.push(base, base + i + 1, base + i) : idx.push(base, base + i, base + i + 1);
+  };
+  cap(pts[0], true); cap(pts[pts.length - 1], false);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+function geometryFor(item) {
+  if (item.tube) return tubeGeometry(item.tube);
+  if (item.slab) return slabGeometry(item.slab);
+  if (item.tray) return trayGeometry(item.tray);
+  if (item.rbox) return rboxGeometry(item.rbox);
+  if (item.box) {
+    const [x0, y0, z0, x1, y1, z1] = item.box;
+    const g = new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0);
+    g.translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    return g;
+  }
+  const pos = [];
+  for (const f of item.faces) {
+    if (Array.isArray(f)) {                             // plain convex face: fan triangulation
+      for (let i = 1; i < f.length - 1; i++) pos.push(...f[0], ...f[i], ...f[i + 1]);
+    } else {                                            // face with holes: project to 2D and triangulate
+      const pts = [...f.v, ...f.h.flat()];
+      let nx = 0, ny = 0, nz = 0;                       // Newell normal of the outer loop picks the projection plane
+      for (let i = 0; i < f.v.length; i++) {
+        const a = f.v[i], b = f.v[(i + 1) % f.v.length];
+        nx += (a[1] - b[1]) * (a[2] + b[2]); ny += (a[2] - b[2]) * (a[0] + b[0]); nz += (a[0] - b[0]) * (a[1] + b[1]);
+      }
+      const drop = Math.abs(nx) > Math.abs(ny) && Math.abs(nx) > Math.abs(nz) ? 0 : Math.abs(ny) > Math.abs(nz) ? 1 : 2;
+      const to2 = p => new THREE.Vector2(...[0, 1, 2].filter(k => k !== drop).map(k => p[k]));
+      const contour = f.v.map(to2), holes = f.h.map(h => h.map(to2));
+      for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(contour, holes)) pos.push(...pts[a], ...pts[b], ...pts[c]);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+// groups: items may carry "g" (an id or a list of ids); an item with groups is drawn only when one of them is enabled. Items without "g" are always drawn.
+// Enabled groups live in the URL (?g=id1,id2); off by default unless the group has "on": true (applied on first load when ?g is absent).
+const enabledGroups = new Set((new URLSearchParams(location.search).get('g') || '').split(',').filter(Boolean));
+let groupsInit = false;
+let groupDefs = [];                                               // [{ id, label, cat, variant }]
+let showRemoved = false;                                          // items named "...Rimosso..." are hidden by default
+let colliders = [];                                               // first-person walls/furniture, rebuilt with the meshes
+function addCollider(item) {                                      // only what can block a standing person: z between ~8" and ~62"
+  const Z0 = 8, Z1 = 62;
+  if (item.box || item.rbox) {
+    const b = item.box || item.rbox.b;
+    if (b[5] > Z0 && b[2] < Z1) colliders.push({ b: [b[0], b[1], b[3], b[4]] });
+  } else if (item.slab) {
+    const { o, z } = item.slab;
+    if (z[1] > Z0 && z[0] < Z1) colliders.push({ b: [Math.min(...o.map(p => p[0])), Math.min(...o.map(p => p[1])), Math.max(...o.map(p => p[0])), Math.max(...o.map(p => p[1]))], o });
+  }
+}
+function build(data) {
+  colliders = [];
+  for (const o of [...model.children]) {
+    model.remove(o);
+    o.traverse(n => {
+      n.geometry?.dispose();
+      for (const m of [].concat(n.material || [])) { m.map?.dispose(); m.dispose?.(); }
+    });
+  }
+  emissiveMats.length = 0;
+  for (const item of data.items) {
+    if (!showRemoved && item.n.includes('Rimosso')) continue;      // "after the works" state
+    const gs = [].concat(item.g || []);
+    if (gs.length && !gs.some(id => enabledGroups.has(id))) continue;   // group switched off
+    const geo = geometryFor(item);
+    const mesh = new THREE.Mesh(geo, item.tex && item.box ? texturedBoxMaterials(item) : item.tex && item.slab ? texturedSlabMaterials(item) : materialFor(item.c));
+    if (item.em) for (const m of [].concat(mesh.material)) { m.emissive = m.color.clone(); emissiveMats.push(m); }
+    mesh.name = item.n;
+    mesh.castShadow = mesh.receiveShadow = true;
+    model.add(mesh);
+    addCollider(item);
+    const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20),
+      new THREE.LineBasicMaterial({ color: 0x2a2d33 }));
+    model.add(edges);
+  }
+  buildLights(data);
+  applyNight();                                         // (rebuilds the path tracer scene too when Render is on)
+  const box = new THREE.Box3().setFromObject(model);
+  const c = box.getCenter(new THREE.Vector3());
+  sun.target.position.copy(c);
+  scene.add(sun.target);
+}
+
+function applyCamera(cam) {
+  camera.fov = cam.fov;
+  camera.position.set(...cam.eye);
+  controls.target.set(...cam.target);
+  camera.up.set(0, 0, 1);                               // always upright; the file's roll would fight OrbitControls
+  camera.updateProjectionMatrix();
+  controls.update();
+}
+
+async function load() {
+  try {
+    const res = await fetch('scene.json?t=' + Date.now(), { cache: 'no-store' });
+    const data = await res.json();
+    if (!groupsInit) { groupsInit = true; if (!new URLSearchParams(location.search).has('g')) for (const g of data.groups || []) if (g.on) enabledGroups.add(g.id); }   // default-on groups ("on": true in scene.json) only when the URL has no ?g
+    current = data;
+    build(data);
+    if (firstLoad) { firstLoad = false; applyInitialView(data); if (new URLSearchParams(location.search).has('fp')) enterFP(); if (new URLSearchParams(location.search).has('rt')) rtOn(); if (new URLSearchParams(location.search).has('ao')) aoOn(); }   // later reloads keep your orbit
+    status.textContent = `${data.items.length} objects · ${new Date().toLocaleTimeString()}`;
+  } catch (e) {
+    console.error('scene load failed:', e);
+    status.textContent = 'waiting for valid scene.json…';
+  }
+}
+
+
+// ---- night mode (key N, ?night=1): daylight off, the "lights" of scene.json on (spot lights, optional shadows), items with "em" glow ----
+// lights: [{ t:'spot', p:[x,y,z], d:[dx,dy,dz] (aim, default down), a: half-angle deg, pen: penumbra 0..1, c:[r,g,b], i: intensity, r: range (0 = unlimited), sh: 1 = casts shadows, g: group id }]
+// A light follows its group like items do. Keep shadow casters to ~12 (each takes one texture unit).
+const lightsGroup = new THREE.Group();
+scene.add(lightsGroup);
+let night = new URLSearchParams(location.search).has('night');
+const rt = { on: false, pt: null, busy: false, mod: null, env: null, last: '' };   // path tracing (Render button)
+const RT_K = 110;
+const nightBtn = document.getElementById('nightbtn');
+function buildLights(data) {
+  for (const o of [...lightsGroup.children]) { lightsGroup.remove(o); o.dispose?.(); }
+  for (const L of data.lights || []) {
+    const gs = [].concat(L.g || []);
+    if (gs.length && !gs.some(id => enabledGroups.has(id))) continue;
+    const col = new THREE.Color(...(L.c || [255, 255, 255]).map(v => v / 255)).convertSRGBToLinear();
+    const sl = new THREE.SpotLight(col, (L.i ?? 200) * (rt.on ? RT_K : 1), L.r || 0, (L.a ?? 60) * Math.PI / 180, L.pen ?? 0.5, rt.on ? 2 : 1);   // path tracer: physical decay 2, intensity scaled so a room looks as bright as in the raster view
+    sl.position.set(...L.p);
+    const d = new THREE.Vector3(...(L.d || [0, 0, -1])).normalize();
+    sl.target.position.copy(sl.position).addScaledVector(d, 100);
+    if (L.sh) {
+      sl.castShadow = true; sl.shadow.mapSize.set(1024, 1024);
+      sl.shadow.bias = -0.0005; sl.shadow.normalBias = 0.6; sl.shadow.camera.near = 2; sl.shadow.camera.far = 900;
+    }
+    lightsGroup.add(sl, sl.target);
+  }
+}
+function applyNight() {
+  scene.background.set(night ? 0x0a0c12 : 0xf4f5f7);
+  hemi.intensity = night ? 0.1 : 2.4;
+  hemi.color.set(night ? 0x7a8cb8 : 0xffffff); hemi.groundColor.set(night ? 0x1c202a : 0xb4b8c0);
+  sun.visible = !night;
+  lightsGroup.visible = night;
+  for (const m of emissiveMats) { m.emissiveIntensity = night ? 1.6 : 0; m.needsUpdate = true; }
+  nightBtn.classList.toggle('active', night);
+  if (rt.on) rtSetup();
+}
+nightBtn.onclick = () => { night = !night; applyNight(); setParams({ night: night ? 1 : null }); };
+
+// ---- AO button (key O, ?ao=1): screen-space ambient occlusion (GTAO) on the raster view: soft contact shadows in corners, under furniture. The path tracer has it built in.
+const aoBtn = document.getElementById('aobtn');
+const ao = { on: false, composer: null, pass: null };
+window.aoResize = (w, h) => ao.composer?.setSize(w, h);
+async function aoOn() {
+  aoBtn.textContent = 'AO…';
+  try {
+    if (!ao.composer) {
+      const [{ EffectComposer }, { RenderPass }, { GTAOPass }, { OutputPass }] = await Promise.all([
+        import('three/addons/postprocessing/EffectComposer.js'), import('three/addons/postprocessing/RenderPass.js'),
+        import('three/addons/postprocessing/GTAOPass.js'), import('three/addons/postprocessing/OutputPass.js')]);
+      const w = view.clientWidth, h = view.clientHeight;
+      const rtg = new THREE.WebGLRenderTarget(w * renderer.getPixelRatio(), h * renderer.getPixelRatio(), { type: THREE.HalfFloatType, samples: 4 });   // MSAA: the composer's targets don't inherit the canvas antialiasing
+      ao.composer = new EffectComposer(renderer, rtg);
+      ao.composer.addPass(new RenderPass(scene, camera));
+      ao.pass = new GTAOPass(scene, camera, w, h);
+      ao.pass.output = GTAOPass.OUTPUT.Default;
+      ao.pass.blendIntensity = 1;
+      ao.pass.updateGtaoMaterial({ radius: 16, distanceExponent: 1.2, thickness: 4, scale: 1.2, samples: 16, distanceFallOff: 1, screenSpaceRadius: false });   // scene units are inches: 16" = 40 cm
+      ao.pass.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, radiusExponent: 1, rings: 2, samples: 16 });
+      ao.composer.addPass(ao.pass);
+      ao.composer.addPass(new OutputPass());
+      ao.composer.setPixelRatio(renderer.getPixelRatio()); ao.composer.setSize(w, h);
+    }
+  } catch (e) { console.error('AO not available:', e); aoBtn.textContent = 'AO'; return; }
+  ao.on = true; aoBtn.textContent = 'AO'; aoBtn.classList.add('active'); setParams({ ao: 1 });
+}
+function aoOff() { ao.on = false; aoBtn.classList.remove('active'); setParams({ ao: null }); }
+aoBtn.onclick = () => ao.on ? aoOff() : aoOn();
+
+// ---- Render button (key T, ?rt=1): progressive GPU path tracing (three-gpu-pathtracer, loaded on demand): global illumination, soft shadows, light bouncing off walls.
+// The raster view is what you edit in; this is for judging the lights. Needs a real GPU. The accumulated image restarts when the camera, scene, lights or night mode change.
+const rtBtn = document.getElementById('rtbtn');
+let rtTimer = null;
+async function rtSetup() {                              // (re)build the BVH from the current scene; debounced because group toggles / reloads come in bursts
+  clearTimeout(rtTimer);
+  rtTimer = setTimeout(async () => {
+    if (!rt.on || rt.busy) { if (rt.on) rtSetup(); return; }
+    rt.busy = true; rtBtn.textContent = 'Render…';
+    try {
+      hemi.visible = false;                              // the path tracer ignores it: sky light comes from the environment instead
+      const G = rt.mod.GradientEquirectTexture;
+      rt.env = rt.env || new G(64);
+      rt.env.topColor.set(night ? 0x1a2036 : 0xbcd2f0); rt.env.bottomColor.set(night ? 0x0a0c12 : 0xd9dadc); rt.env.update();
+      scene.environment = rt.env; scene.environmentIntensity = night ? 0.15 : 1.1;
+      rt.pt.setScene(scene, camera);                     // synchronous BVH build: freezes the page for a few seconds on a big scene (the async build needs a worker)
+      rt.last = '';
+    } catch (e) { console.error('path tracer setup failed:', e); rtOff(); }
+    rt.busy = false;
+  }, 300);
+}
+async function rtOn() {
+  rtBtn.textContent = 'Render…';
+  try {
+    rt.mod = rt.mod || await import('three-gpu-pathtracer');
+    if (!rt.pt) {
+      rt.pt = new rt.mod.WebGLPathTracer(renderer);
+      Object.assign(rt.pt, { bounces: 5, renderScale: 0.6, dynamicLowRes: true, lowResScale: 0.25, filterGlossyFactor: 0.5, minSamples: 3, fadeDuration: 300, renderDelay: 50 });
+    }
+  } catch (e) { console.error('path tracer not available:', e); rtBtn.textContent = 'Render'; return; }
+  rt.on = true; rtBtn.classList.add('active'); setParams({ rt: 1 });
+  buildLights(current); applyNight();                     // lights with path-tracer intensity / decay (applyNight triggers rtSetup)
+}
+function rtOff() {
+  rt.on = false; rtBtn.classList.remove('active'); rtBtn.textContent = 'Render'; setParams({ rt: null });
+  scene.environment = null; hemi.visible = true;
+  if (current) buildLights(current);
+  applyNight();
+}
+rtBtn.onclick = () => rt.on ? rtOff() : rtOn();
+function rtFrame() {                                    // one animation frame in path-tracing mode; false = not ready, fall back to raster
+  if (!rt.on || !rt.pt || rt.busy) return false;
+  camera.updateMatrixWorld();
+  const key = [...camera.position.toArray(), ...camera.quaternion.toArray(), camera.fov, view.clientWidth].map(v => +v.toFixed(3)).join(',');   // rounded: OrbitControls damping jitters at 1e-7 every frame, which would reset the accumulation forever
+  if (key !== rt.last) { rt.last = key; rt.pt.updateCamera(); }
+  rt.pt.renderSample();
+  if ((rt.tick = (rt.tick || 0) + 1) % 15 === 0) rtBtn.textContent = 'Render · ' + Math.floor(rt.pt.samples);
+  return true;
+}
+
+// ---- camera presets (computed from the model's bounding box, so they follow the geometry) ----
+function bounds() {
+  const box = new THREE.Box3().setFromObject(model);
+  return { box, c: box.getCenter(new THREE.Vector3()), r: box.getBoundingSphere(new THREE.Sphere()).radius };
+}
+function orbitView(dir, fov = 35, dist = 2.6) {          // dir = direction from target toward the eye
+  const { c, r } = bounds();
+  const d = new THREE.Vector3(...dir).normalize().multiplyScalar(r * dist);
+  setCam(c.clone().add(d), c, fov);
+}
+function setCam(eye, target, fov) {
+  camera.fov = fov;
+  camera.position.copy(eye);
+  controls.target.copy(target);
+  camera.up.set(0, 0, 1);
+  camera.updateProjectionMatrix();
+  controls.update();
+}
+const PRESETS = [
+  ['Saved',    () => current && applyCamera(current.camera)],
+  ['Iso',      () => orbitView([1, -1, 0.8])],
+  ['Iso 2',    () => orbitView([-1, -1, 0.8])],
+  ['Front',    () => orbitView([0, -1, 0.12])],
+  ['Back',     () => orbitView([0, 1, 0.12])],
+  ['Left',     () => orbitView([-1, 0, 0.12])],
+  ['Right',    () => orbitView([1, 0, 0.12])],
+  ['Top',      () => orbitView([0, -0.001, 1], 35, 2.4)],
+  ['Interior', () => {                                    // standing eye height (66"), looking at the far corner
+    const { box } = bounds(), s = box.min, e = box.max, w = e.x - s.x, d = e.y - s.y;
+    setCam(new THREE.Vector3(s.x + w * 0.15, s.y + d * 0.15, 66), new THREE.Vector3(e.x - w * 0.1, e.y - d * 0.1, 48), 60);
+  }],
+];
+// ---- the chosen view lives in the URL (?view=Iso or ?cam=ex,ey,ez,tx,ty,tz,fov) so a refresh restores it ----
+const viewsEl = document.getElementById('views');
+const viewButtons = {};
+function setParams(changes) {
+  const u = new URL(location.href);
+  for (const [k, v] of Object.entries(changes)) v == null ? u.searchParams.delete(k) : u.searchParams.set(k, v);
+  history.replaceState(null, '', u);
+}
+function markActive(name) { for (const [n, b] of Object.entries(viewButtons)) b.classList.toggle('active', n === name); }
+function runPreset(i) {
+  const [name, fn] = PRESETS[i];
+  fn();
+  setParams({ view: name, cam: null });
+  markActive(name);
+}
+function saveCam() {                                     // free orbit / zoom -> store the exact camera
+  const f = v => +v.toFixed(2), p = camera.position, t = controls.target;
+  setParams({ cam: [p.x, p.y, p.z, t.x, t.y, t.z, camera.fov].map(f).join(','), view: null });
+  markActive(null);
+}
+function applyInitialView(data) {                        // ?cam wins, then ?view, then the camera saved in scene.json
+  const q = new URLSearchParams(location.search);
+  const cam = q.get('cam')?.split(',').map(Number);
+  if (cam && cam.length === 7 && cam.every(Number.isFinite)) {
+    setCam(new THREE.Vector3(cam[0], cam[1], cam[2]), new THREE.Vector3(cam[3], cam[4], cam[5]), cam[6]);
+    return;
+  }
+  const i = PRESETS.findIndex(([n]) => n === q.get('view'));
+  if (i >= 0) { PRESETS[i][1](); markActive(PRESETS[i][0]); return; }
+  applyCamera(data.camera);
+}
+controls.addEventListener('end', saveCam);
+PRESETS.forEach(([name, fn], i) => {
+  const b = document.createElement('button');
+  b.textContent = name; b.title = `${name}  (key ${i + 1})`; b.onclick = () => runPreset(i);
+  viewsEl.appendChild(b);
+  viewButtons[name] = b;
+});
+// ---- dimensions: overall size, hover tooltip, click an object to dimension it ----
+const IN = 2.54;                                         // scene units are inches
+const UNITS = ['cm', 'in', 'm'];
+let unit = 0, showDims = false, selected = null;         // selected = mesh name
+const fmt = inches => unit === 0 ? (inches * IN).toFixed(1) + ' cm'
+                   : unit === 1 ? inches.toFixed(1) + '″'
+                   : (inches * IN / 100).toFixed(2) + ' m';
+
+const dimGroup = new THREE.Group();
+scene.add(dimGroup);
+const labelsEl = document.getElementById('labels');
+const tipEl = document.getElementById('tip');
+let labels = [];                                         // { el, pos }
+
+function clearDims() {
+  for (const o of [...dimGroup.children]) { dimGroup.remove(o); o.geometry.dispose(); o.material.dispose(); }
+  labelsEl.innerHTML = ''; labels = [];
+}
+
+function dimLine(a, b, tickDir, tick, label) {
+  const pts = [a, b,
+    a.clone().addScaledVector(tickDir, tick), a.clone().addScaledVector(tickDir, -tick),
+    b.clone().addScaledVector(tickDir, tick), b.clone().addScaledVector(tickDir, -tick)];
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xd9480f, depthTest: false }));
+  l.renderOrder = 10;
+  dimGroup.add(l);
+  const el = document.createElement('div');
+  el.className = 'dim'; el.textContent = label;
+  labelsEl.appendChild(el);
+  labels.push({ el, pos: a.clone().add(b).multiplyScalar(0.5) });
+}
+
+function drawDims(box) {
+  clearDims();
+  if (!box || box.isEmpty()) return;
+  const s = box.min, e = box.max, sz = box.getSize(new THREE.Vector3());
+  const off = Math.max(3, Math.max(sz.x, sz.y, sz.z) * 0.07), tick = off * 0.35;
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  dimLine(V(s.x, s.y - off, s.z), V(e.x, s.y - off, s.z), V(0, 1, 0), tick, 'W ' + fmt(sz.x));   // width  (X)
+  dimLine(V(e.x + off, s.y, s.z), V(e.x + off, e.y, s.z), V(1, 0, 0), tick, 'D ' + fmt(sz.y));   // depth  (Y)
+  dimLine(V(e.x + off, s.y - off, s.z), V(e.x + off, s.y - off, e.z), V(1, 0, 0), tick, 'H ' + fmt(sz.z)); // height (Z)
+}
+
+function refreshDims() {
+  const sel = selected && model.children.find(o => o.isMesh && o.name === selected);
+  if (sel) drawDims(new THREE.Box3().setFromObject(sel));
+  else if (showDims) drawDims(new THREE.Box3().setFromObject(model));
+  else clearDims();
+  for (const o of model.children) if (o.isMesh) for (const m of [].concat(o.material)) m.emissive?.setHex(o === sel ? 0x5a2a00 : 0x000000);
+  document.getElementById('dims').classList.toggle('on', showDims);
+  document.getElementById('unit').textContent = UNITS[unit];
+}
+// ---- groups panel: checkboxes per group, grouped by category; groups sharing a "variant" are mutually exclusive ----
+const groupsEl = document.getElementById('groups'), gbtn = document.getElementById('gbtn');
+function computeGroupDefs(data) {
+  const defs = new Map();
+  for (const g of data.groups || []) defs.set(g.id, { id: g.id, label: g.label || g.id, cat: g.cat || 'Altro', variant: g.variant || null });
+  for (const it of data.items) for (const id of [].concat(it.g || [])) if (!defs.has(id)) defs.set(id, { id, label: id, cat: 'Altro', variant: null });
+  return [...defs.values()];
+}
+function setGroup(id, on) {
+  const def = groupDefs.find(d => d.id === id);
+  if (on && def?.variant) for (const d of groupDefs) if (d.variant === def.variant && d.id !== id) enabledGroups.delete(d.id);
+  on ? enabledGroups.add(id) : enabledGroups.delete(id);
+  groupsChanged();
+}
+function setAllGroups(on) {
+  enabledGroups.clear();
+  if (on) {
+    const seen = new Set();                                  // "all on" picks the first group of every variant set
+    for (const d of groupDefs) { if (d.variant) { if (seen.has(d.variant)) continue; seen.add(d.variant); } enabledGroups.add(d.id); }
+  }
+  groupsChanged();
+}
+function groupsChanged() {
+  const live = groupDefs.map(d => d.id).filter(id => enabledGroups.has(id));
+  setParams({ g: live.length ? live.join(',') : null });
+  selected = null;
+  if (current) { build(current); refreshDims(); }
+  renderGroups(current);
+}
+let collapsedCats = new Set();                            // categorie chiuse nel pannello Gruppi (ricordate per questo browser)
+try { collapsedCats = new Set(JSON.parse(localStorage.getItem('collapsedCats') || '[]')); } catch (e) {}
+function saveCollapsed() { try { localStorage.setItem('collapsedCats', JSON.stringify([...collapsedCats])); } catch (e) {} }
+function renderGroups(data) {
+  if (!data) return;
+  groupDefs = computeGroupDefs(data);
+  const n = groupDefs.filter(d => enabledGroups.has(d.id)).length;
+  gbtn.classList.toggle('has', groupDefs.length > 0);
+  gbtn.classList.toggle('on', n > 0);
+  gbtn.textContent = n ? `Gruppi (${n})` : 'Gruppi';
+  groupsEl.innerHTML = '';
+  const cats = [...new Set(groupDefs.map(d => d.cat))];
+  for (const cat of cats) {
+    const inCat = groupDefs.filter(x => x.cat === cat), isOpen = !collapsedCats.has(cat);
+    const h = document.createElement('h4'); h.className = 'cat' + (isOpen ? ' open' : '');   // titolo cliccabile: > chiuso, v aperto
+    const chev = document.createElement('span'); chev.className = 'chev'; chev.textContent = '›';
+    h.append(chev, cat);
+    const nOn = inCat.filter(d => enabledGroups.has(d.id)).length;
+    if (!isOpen && nOn) { const c = document.createElement('span'); c.className = 'cnt'; c.textContent = nOn + ' on'; h.appendChild(c); }
+    h.onclick = () => { collapsedCats.has(cat) ? collapsedCats.delete(cat) : collapsedCats.add(cat); saveCollapsed(); renderGroups(current); };
+    groupsEl.appendChild(h);
+    if (!isOpen) continue;
+    for (const d of inCat) {
+      const l = document.createElement('label'), cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = enabledGroups.has(d.id);
+      cb.onchange = () => setGroup(d.id, cb.checked);
+      l.append(cb, d.label + (d.variant ? '  ·  variante' : ''));
+      groupsEl.appendChild(l);
+    }
+  }
+  const acts = document.createElement('div'); acts.className = 'acts';
+  for (const [txt, on] of [['Accendi tutto', true], ['Spegni tutto', false]]) {
+    const b = document.createElement('button'); b.textContent = txt; b.onclick = () => setAllGroups(on); acts.appendChild(b);
+  }
+  groupsEl.appendChild(acts);
+}
+gbtn.onclick = () => gbtn.classList.toggle('open', groupsEl.classList.toggle('open'));
+
+// scene reloads rebuild the meshes, so re-apply the selection and dimensions afterwards
+const _load = load;
+load = async function () { await _load(); renderGroups(current); refreshDims(); };
+
+document.getElementById('dims').onclick = () => { showDims = !showDims; selected = null; refreshDims(); };
+document.getElementById('removed').onclick = () => {
+  showRemoved = !showRemoved; selected = null;
+  document.getElementById('removed').classList.toggle('on', showRemoved);
+  if (current) { build(current); refreshDims(); }              // niente da ricostruire finché la scena non è caricata
+};
+document.getElementById('unit').onclick = () => { unit = (unit + 1) % UNITS.length; refreshDims(); };
+
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+function pick(ev) {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  return ray.intersectObjects(model.children.filter(o => o.isMesh), false)[0]?.object || null;
+}
+renderer.domElement.addEventListener('pointermove', ev => {
+  const hit = ev.buttons ? null : pick(ev);
+  if (!hit) { tipEl.style.display = 'none'; return; }
+  const sz = new THREE.Box3().setFromObject(hit).getSize(new THREE.Vector3());
+  const parts = hit.name.split('/').filter(Boolean);
+  tipEl.innerHTML = `<b>${parts.slice(-2).join(' / ')}</b><br>${fmt(sz.x)} × ${fmt(sz.y)} × ${fmt(sz.z)}`;
+  tipEl.style.cssText += `;display:block;left:${ev.clientX + 14}px;top:${ev.clientY + 14}px`;
+});
+renderer.domElement.addEventListener('pointerleave', () => tipEl.style.display = 'none');
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', ev => downAt = [ev.clientX, ev.clientY]);
+renderer.domElement.addEventListener('pointerup', ev => {                 // a click, not a drag
+  if (!downAt || Math.hypot(ev.clientX - downAt[0], ev.clientY - downAt[1]) > 4) return;
+  const hit = pick(ev);
+  selected = hit && hit.name !== selected ? hit.name : null;
+  refreshDims();
+});
+
+const _v = new THREE.Vector3();
+function placeLabels() {
+  const w = view.clientWidth, h = view.clientHeight;
+  for (const { el, pos } of labels) {
+    _v.copy(pos).project(camera);
+    const vis = _v.z < 1 && Math.abs(_v.x) <= 1 && Math.abs(_v.y) <= 1;   // hide labels behind the camera or off-screen
+    el.style.display = vis ? 'block' : 'none';
+    el.style.left = ((_v.x + 1) / 2) * w + 'px';
+    el.style.top = ((1 - _v.y) / 2) * h + 'px';
+  }
+}
+
+function zoom(factor) {                                  // dolly toward / away from the orbit target
+  const off = camera.position.clone().sub(controls.target).multiplyScalar(factor);
+  const len = Math.min(Math.max(off.length(), 5), 4000);
+  camera.position.copy(controls.target).add(off.setLength(len));
+  controls.update();
+  saveCam();
+}
+document.getElementById('zin').onclick = () => zoom(0.8);
+document.getElementById('zout').onclick = () => zoom(1.25);
+
+// ---- first-person walk: WASD / arrows move, Q/E turn, click to look, spawn at scene.json "spawn" ({p:[x,y], yaw: degrees from +X, ccw}) ----
+const EYE = 66, RADIUS = 6, fpbtn = document.getElementById('fpbtn');
+let fp = null, fpLook = false;                                           // null = orbit mode; else { x, y, yaw, pitch, saved }
+function hitsSlab(o, x, y) {                             // circle vs. polygon (inside, or closer than RADIUS to an edge)
+  let inside = false;
+  for (let i = 0, j = o.length - 1; i < o.length; j = i++) {
+    const [xi, yi] = o[i], [xj, yj] = o[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    const dx = xj - xi, dy = yj - yi, t = Math.max(0, Math.min(1, ((x - xi) * dx + (y - yi) * dy) / (dx * dx + dy * dy || 1)));
+    if (Math.hypot(x - xi - t * dx, y - yi - t * dy) < RADIUS) return true;
+  }
+  return inside;
+}
+function blocked(x, y) {
+  for (const c of colliders) {
+    const b = c.b;
+    if (x < b[0] - RADIUS || x > b[2] + RADIUS || y < b[1] - RADIUS || y > b[3] + RADIUS) continue;
+    if (c.o) { if (hitsSlab(c.o, x, y)) return true; continue; }
+    const dx = Math.max(b[0] - x, 0, x - b[2]), dy = Math.max(b[1] - y, 0, y - b[3]);
+    if (dx * dx + dy * dy < RADIUS * RADIUS) return true;
+  }
+  return false;
+}
+function fpPlace() {
+  const cp = Math.cos(fp.pitch);
+  camera.position.set(fp.x, fp.y, EYE);
+  camera.lookAt(fp.x + Math.cos(fp.yaw) * cp, fp.y + Math.sin(fp.yaw) * cp, EYE + Math.sin(fp.pitch));
+}
+function enterFP() {
+  if (fp) return;
+  const sp = current?.spawn;
+  let x, y, yaw;
+  if (sp) { [x, y] = sp.p; yaw = (sp.yaw || 0) * Math.PI / 180; }
+  else { const { box } = bounds(), c = box.getCenter(new THREE.Vector3()); x = box.min.x + (box.max.x - box.min.x) * 0.15; y = box.min.y + (box.max.y - box.min.y) * 0.15; yaw = Math.atan2(c.y - y, c.x - x); }
+  fp = { x, y, yaw, pitch: 0, saved: { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov } };
+  controls.enabled = false; held.clear();
+  camera.fov = 70; camera.updateProjectionMatrix();
+  document.body.classList.add('fp'); fpbtn.classList.add('active');
+  setParams({ fp: 1 }); fpPlace();
+}
+function exitFP() {
+  if (!fp) return;
+  const s = fp.saved; window.fpStopLook?.(); fp = null; held.clear();
+  controls.enabled = true;
+  setCam(s.pos, s.target, s.fov);
+  document.body.classList.remove('fp'); fpbtn.classList.remove('active');
+  setParams({ fp: null });
+}
+window.fpState = () => fp;                               // debug / tests
+fpbtn.onclick = () => fp ? exitFP() : enterFP();
+function stepFP(dt) {
+  const turn = (held.has('e') ? -1 : 0) + (held.has('q') ? 1 : 0);
+  fp.yaw += turn * dt * 1.6;                             // E = turn right (clockwise seen from above), Q = left
+  let f = 0, r = 0;
+  for (const k of held) { const m = MOVE[k]; if (m && k !== 'e' && k !== 'q') { r += m[0]; f += m[1]; } }
+  if (f || r) {
+    const sp = dt * (held.has('shift') ? 240 : 80) / Math.hypot(f, r);   // inches per second (80" = 2 m/s)
+    const dx = (Math.cos(fp.yaw) * f + Math.sin(fp.yaw) * r) * sp, dy = (Math.sin(fp.yaw) * f - Math.cos(fp.yaw) * r) * sp;
+    const stuck = blocked(fp.x, fp.y);                   // already inside something: let the user walk out
+    if (stuck || !blocked(fp.x + dx, fp.y)) fp.x += dx;
+    if (stuck || !blocked(fp.x, fp.y + dy)) fp.y += dy;
+  }
+  fpPlace();
+}
+{ const cv = renderer.domElement;                      // click to start looking around (mouse captured), click again (or Esc) to stop
+  const setLook = on => {
+    if (!fp) on = false;
+    fpLook = on; document.body.classList.toggle('look', on);
+    if (on) cv.requestPointerLock?.(); else if (document.pointerLockElement === cv) document.exitPointerLock();
+  };
+  cv.addEventListener('click', () => { if (fp) setLook(!fpLook); });
+  document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement !== cv && fpLook) setLook(false); });
+  addEventListener('mousemove', e => {
+    if (!fp || !fpLook) return;
+    fp.yaw -= e.movementX * 0.003;
+    fp.pitch = Math.max(-1.2, Math.min(1.2, fp.pitch - e.movementY * 0.003));
+  });
+  window.fpStopLook = () => setLook(false);
+}
+// ---- keyboard fly: WASD / arrows move on the floor plane, Q/E down/up, Shift = faster ----
+const MOVE = { w: [0, 1, 0], arrowup: [0, 1, 0], s: [0, -1, 0], arrowdown: [0, -1, 0],
+               a: [-1, 0, 0], arrowleft: [-1, 0, 0], d: [1, 0, 0], arrowright: [1, 0, 0], e: [0, 0, 1], q: [0, 0, -1] };
+const held = new Set();
+let lastT = 0;
+function stepMove(now) {
+  const dt = Math.min((now - lastT) / 1000, 0.1); lastT = now;
+  if (fp) { stepFP(dt); return; }
+  if (!held.size) return;
+  let r = 0, f = 0, u = 0;
+  for (const k of held) { const m = MOVE[k]; r += m[0]; f += m[1]; u += m[2]; }
+  const fwd = controls.target.clone().sub(camera.position); fwd.z = 0;
+  if (fwd.lengthSq() < 1e-6) { fwd.set(0, 1, 0).applyQuaternion(camera.quaternion); fwd.z = 0; }   // looking straight down: use screen-up
+  fwd.normalize();
+  const right = new THREE.Vector3(fwd.y, -fwd.x, 0);
+  const d = fwd.multiplyScalar(f).add(right.multiplyScalar(r)); d.z = u;
+  if (!d.lengthSq()) return;
+  d.normalize().multiplyScalar(dt * (held.has('shift') ? 480 : 160));   // inches per second
+  camera.position.add(d); controls.target.add(d);
+}
+addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  const k = e.key.toLowerCase();
+  if (k in MOVE) { held.add(k); if (e.shiftKey) held.add('shift'); e.preventDefault(); return; }
+});
+addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  held.delete(k); if (!e.shiftKey) held.delete('shift');
+  if (k in MOVE && !Object.keys(MOVE).some(x => held.has(x))) { held.clear(); if (!fp) saveCam(); }
+});
+addEventListener('blur', () => held.clear());
+addEventListener('keydown', e => {
+  if (e.key === 'o' || e.key === 'O') return aoBtn.click();
+  if (e.key === 't' || e.key === 'T') return rtBtn.click();
+  if (e.key === 'n' || e.key === 'N') return nightBtn.click();
+  if (e.key === 'f' || e.key === 'F') return fpbtn.click();
+  if (e.key === 'Escape') return exitFP();
+  if (fp && /^[1-9+=_-]$/.test(e.key)) { if (/\d/.test(e.key)) exitFP(); else return; }
+  if (e.key === '+' || e.key === '=') return zoom(0.8);
+  if (e.key === '-' || e.key === '_') return zoom(1.25);
+  if (e.key === 'm' || e.key === 'M') return document.getElementById('dims').click();
+  if (e.key === 'u' || e.key === 'U') return document.getElementById('unit').click();
+  if (e.key === 'r' || e.key === 'R') return document.getElementById('removed').click();
+  if (e.key === 'g' || e.key === 'G') return gbtn.click();
+  const i = Number(e.key) - 1;
+  if (i >= 0 && i < PRESETS.length && !e.metaKey && !e.ctrlKey) runPreset(i);
+});
+
+if (!window.STATIC_BUILD) {                              // versione statica (Cloudflare Pages): niente server, niente aggiornamento automatico
+  const es = new EventSource('events');
+  es.onopen = () => dot.className = 'live';
+  es.onerror = () => dot.className = '';
+  es.addEventListener('reload', () => {
+    dot.className = 'flash'; setTimeout(() => dot.className = 'live', 400);
+    load();
+  });
+}
+
+load();
+renderer.setAnimationLoop(now => { stepMove(now); if (!fp) controls.update();   // in first person OrbitControls would re-aim the camera at its target
+   if (!rtFrame()) { if (ao.on && ao.composer) ao.composer.render(); else renderer.render(scene, camera); }
+   placeLabels(); });
+</script>
+</body>
+</html>

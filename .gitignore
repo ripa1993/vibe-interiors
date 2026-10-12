@@ -20,6 +20,3 @@ shot*.png
 # eventuali segreti
 .env
 .env.*
-
-# versione statica generata da `npm run build`
-dist/

@@ -28,6 +28,14 @@ if (fs.existsSync(path.join(ROOT, 'public/textures'))) copyDir(path.join(ROOT, '
 // three.js servito dallo stesso sito (stessi percorsi relativi di server.js): serve solo build/ (moduli ES) e le utility OrbitControls
 copyDir(path.join(THREE, 'build'), path.join(OUT, 'three/build'), f => /three\.(module|core)\.js$/.test(f));
 copyDir(path.join(THREE, 'examples/jsm/controls'), path.join(OUT, 'three/examples/jsm/controls'));
+copyDir(path.join(THREE, 'examples/jsm/postprocessing'), path.join(OUT, 'three/examples/jsm/postprocessing'), f => /\.js$/.test(f));   // path tracer (Pass.js) + occlusione ambientale (EffectComposer, GTAOPass)
+copyDir(path.join(THREE, 'examples/jsm/shaders'), path.join(OUT, 'three/examples/jsm/shaders'), f => /(Copy|Output|GTAO|PoissonDenoise)Shader\.js$/.test(f));
+fs.mkdirSync(path.join(OUT, 'three/examples/jsm/math'), { recursive: true });
+fs.copyFileSync(path.join(THREE, 'examples/jsm/math/SimplexNoise.js'), path.join(OUT, 'three/examples/jsm/math/SimplexNoise.js'));
+for (const pkg of ['three-gpu-pathtracer', 'three-mesh-bvh']) {          // path tracer (pulsante Render): solo il bundle ES
+  fs.mkdirSync(path.join(OUT, 'vendor', pkg, 'build'), { recursive: true });
+  fs.copyFileSync(path.join(ROOT, 'node_modules', pkg, 'build/index.module.js'), path.join(OUT, 'vendor', pkg, 'build/index.module.js'));
+}
 
 // intestazioni Cloudflare Pages: niente indicizzazione, niente cache lunga su scene.json
 fs.writeFileSync(path.join(OUT, '_headers'), '/*\n  X-Robots-Tag: noindex, nofollow\n/scene.json\n  Cache-Control: no-cache\n');
