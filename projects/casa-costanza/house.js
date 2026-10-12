@@ -28,6 +28,8 @@ const group = (id, fn) => { const from = items.length; fn(); for (let k = from; 
 defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
 defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
 defGroup('attacchi-wc-piccolo', 'Attacchi WC piccolo', 'Attacchi');
+defGroup('wc-grande-arredo', 'WC grande · doccia, lavasciuga, water, bidet, mobile lavabo (sui attacchi esistenti)', 'WC grande');
+defGroup('wc-piccolo-arredo', 'WC piccolo · bidet, water, lavabo da hotel (sui attacchi esistenti)', 'WC piccolo');
 defGroup('cucina-v1', 'Cucina v1 · penisola colazione', 'Cucina', 'cucina');   // le varianti della cucina sono mutuamente esclusive (stessa `variant`)
 defGroup('soggiorno-divano', 'Soggiorno · divano ad L + tappeto + lampada', 'Soggiorno', 'divano');
 defGroup('divano-v1', 'Soggiorno · divano Cavarelli lineare', 'Soggiorno', 'divano');
@@ -52,8 +54,10 @@ defGroup('cucina-v3', 'Cucina v3 · come la v1, senza penisola', 'Cucina', 'cuci
 defGroup('cucina-v2', 'Cucina v2 · linea ovest + penisola stretta', 'Cucina', 'cucina');
 const box = (n, c, x0, y0, z0, x1, y1, z1) =>
   items.push({ n, c, box: [x0, y0, z0, x1, y1, z1].map(inch) });
-const slab = (n, c, poly, z0, z1) =>
-  items.push({ n, c, slab: { o: poly.map(p => p.map(inch)), h: [], z: [inch(z0), inch(z1)] } });
+const slab = (n, c, poly, z0, z1, holes = []) =>
+  items.push({ n, c, slab: { o: poly.map(p => p.map(inch)), h: holes.map(h => h.map(p => p.map(inch))), z: [inch(z0), inch(z1)] } });
+const tray = (n, c, poly, zFloor, zTop) =>
+  items.push({ n, c, tray: { o: poly.map(p => p.map(inch)), z: [inch(zFloor), inch(zTop)] } });
 const tube = (n, c, p, r, seg = 8) =>
   items.push({ n, c, tube: { p: p.map(q => q.map(inch)), r: r.map(inch), n: seg } });
 const rbox = (n, c, b, r, top, bot = 0) =>
@@ -243,10 +247,10 @@ box('/WC/Muro_Sx', C.est, -412, 28 + DY, 0, -382, yT0, H);
   box('/WC/Muro_Sotto_B', C.est, -290, yb0, 0, xr, yb1, H);
   box('/WC/Muro_Sotto_Architrave', C.est, -370, yb0, 210, -290, yb1, H);
   stipiteX('/WC/Sotto_Stipite', -370, -290, yb0, yb1);
-  box('/WC/Tramezzo_A', C.est, -382, yp0, 0, -262, yp1, H);
-  box('/WC/Tramezzo_B', C.est, -192, yp0, 0, xr, yp1, H);
-  box('/WC/Tramezzo_Architrave', C.est, -262, yp0, 210, -192, yp1, H);
-  stipiteX('/WC/Tramezzo_Stipite', -262, -192, yp0, yp1);
+  box('/WC/Tramezzo_A', C.est, -382, yp0, 0, -317, yp1, H);
+  box('/WC/Tramezzo_B', C.est, -247, yp0, 0, xr, yp1, H);
+  box('/WC/Tramezzo_Architrave', C.est, -317, yp0, 210, -247, yp1, H);
+  stipiteX('/WC/Tramezzo_Stipite', -317, -247, yp0, yp1);
 }
 { // muro sinistro del corridoio con la porta d'ingresso (stima 90 x 210, centrata nel corridoio, anta chiusa)
   const cy = (28 + DY) / 2, d0 = cy - 45, d1 = cy + 45;
@@ -364,6 +368,8 @@ box('/Letto1/Architrave_Finestra', C.est, 189, yW0, 250, 309, yW1, H);   // port
 
 
 // ---------- arredi (gruppi) ----------
+require('./wc-grande.js')({ box, tube, rbox, slab, tray, group });
+require('./wc-piccolo.js')({ box, tube, rbox, slab, tray, group, L });
 require('./cucina-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v3.js')({ box, tube, rbox, slab, group, n: yT0 });
