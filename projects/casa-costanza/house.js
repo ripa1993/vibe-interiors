@@ -31,7 +31,8 @@ defGroup('attacchi-wc-piccolo', 'Attacchi WC piccolo', 'Attacchi');
 defGroup('cucina-v1', 'Cucina v1 · penisola colazione', 'Cucina', 'cucina');   // le varianti della cucina sono mutuamente esclusive (stessa `variant`)
 defGroup('soggiorno-divano', 'Soggiorno · divano ad L + tappeto + lampada', 'Soggiorno', 'divano');
 defGroup('divano-v1', 'Soggiorno · divano Cavarelli lineare', 'Soggiorno', 'divano');
-defGroup('divano-v2', 'Soggiorno · divano letto IKEA Barsloev con chaise, di fronte alla TV', 'Soggiorno', 'divano');   // i due divani sono varianti: uno esclude l'altro
+defGroup('divano-v2', 'Soggiorno · divano letto IKEA Barsloev con chaise, di fronte alla TV', 'Soggiorno', 'divano');
+defGroup('divano-v3', 'Soggiorno · divano IKEA ruotato verso la TV a est, chaise a nord', 'Soggiorno', 'divano');   // i due divani sono varianti: uno esclude l'altro
 defGroup('armadio-ante', 'Camera sud · ante a specchio per i 2 PAX (con armadio-v2)', 'Camera sud');
 defGroup('besta', 'Camera sud · composizione BESTA appesa sotto la TV (con armadio-v2)', 'Camera sud');
 defGroup('parete-testata', 'Camera sud · parete della testata verde salvia', 'Camera sud');
@@ -44,7 +45,8 @@ defGroup('comodini', 'Camera sud · 2 comodini Halston', 'Camera sud');
 defGroup('letto-v1', 'Camera sud · letto IKEA Gladstad 160x200', 'Camera sud');
 defGroup('tavolo', 'Soggiorno · tavolo allungabile + 4 sedie', 'Soggiorno');
 defGroup('soggiorno-libreria', 'Soggiorno · libreria a mensole nella nicchia', 'Soggiorno');
-defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno');
+defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno', 'tv');
+defGroup('soggiorno-tv-est', 'Soggiorno · TV a est, parete attrezzata', 'Soggiorno', 'tv');   // varianti: una esclude l'altra
 defGroup('cucina-v2', 'Cucina v2 · linea ovest + penisola stretta', 'Cucina', 'cucina');
 const box = (n, c, x0, y0, z0, x1, y1, z1) =>
   items.push({ n, c, box: [x0, y0, z0, x1, y1, z1].map(inch) });
@@ -365,7 +367,9 @@ require('./cucina-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./soggiorno-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./divano-v3.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./libreria-nicchia.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./tv-est.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./tavolo.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./letto-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./comodini.js')({ box, tube, rbox, slab, group, n: yT0 });
