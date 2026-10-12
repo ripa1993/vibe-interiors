@@ -8,6 +8,7 @@ const OUT = process.argv[2] || path.join(__dirname, 'scene.json');
 const SOGG_D = 501;                              // profondità interna del soggiorno (prima 401: probabile errore di misura)
 const DY = SOGG_D - 401;                          // spostamento delle parti ancorate al muro in alto
 const H = 330;                                   // altezza uniforme dei locali
+let SPAWN;
 const inch = v => +(v / 2.54).toFixed(3);
 
 // colori: pareti tutte bianche (C.wall = misurato, C.est = stimato: la distinzione resta nei nomi/commenti); da rimuovere nei lavori in arancio
@@ -253,6 +254,7 @@ box('/WC/Muro_Sx', C.est, -412, 28 + DY, 0, -382, yT0, H);
 }
 { // muro sinistro del corridoio con la porta d'ingresso (stima 90 x 210, centrata nel corridoio, anta chiusa)
   const cy = (28 + DY) / 2, d0 = cy - 45, d1 = cy + 45;
+  SPAWN = { p: [-382 + 60, cy].map(inch), yaw: 0 };                       // prima persona: appena dentro la porta d'ingresso, sguardo verso est (+x)
   box('/Ingresso/Muro_A', C.est, -412, 0, 0, -382, d0, H);
   box('/Ingresso/Muro_B', C.est, -412, d1, 0, -382, 28 + DY, H);
   box('/Ingresso/Architrave', C.est, -412, d0, 210, -382, d1, H);
@@ -404,6 +406,6 @@ const scene = {
   camera: { eye: [700, -1500, 1200].map(inch), target: [34, 131 + DY / 2, 0].map(inch), up: [0, 0, 1], fov: 35 },
   items,
 };
-fs.writeFileSync(OUT, '{"units":"inches","camera":' + JSON.stringify(scene.camera) + ',"groups":' + JSON.stringify(GROUPS) + ',"items":[\n' +
+fs.writeFileSync(OUT, '{"units":"inches","camera":' + JSON.stringify(scene.camera) + ',"spawn":' + JSON.stringify(SPAWN) + ',"groups":' + JSON.stringify(GROUPS) + ',"items":[\n' +
   items.map(i => JSON.stringify(i)).join(',\n') + '\n]}\n');
 console.log('items:', items.length, '->', OUT);

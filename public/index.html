@@ -18,6 +18,10 @@
   #zoom button { width: 28px; font-size: 16px; line-height: 1; padding: 3px 0; }
   #dimctl { display: flex; gap: 4px; margin-left: 6px; padding-left: 10px; border-left: 1px solid #d5d8de; }
   button.on { background: #d9480f; border-color: #d9480f; color: #fff; }
+  #fpbtn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  #fphint { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: none; z-index: 5; pointer-events: none;
+            background: rgba(30,32,38,.85); color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
+  body.fp #fphint { display: block; } body.fp #view { cursor: pointer; } body.look #view { cursor: none; }
   #views button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
   #gbtn { display: none; }
   #gbtn.has { display: inline-block; }
@@ -46,11 +50,13 @@
 <div id="view"></div>
 <div id="bar"><span id="dot"></span><span id="status">connecting…</span>
   <span id="views"></span>
+  <span id="fpctl"><button id="fpbtn" title="Prima persona: cammina nella casa (F)">Prima persona</button></span>
   <span id="zoom"><button id="zin" title="Zoom in (+)">+</button><button id="zout" title="Zoom out (−)">−</button></span>
   <span id="dimctl"><button id="dims" title="Show overall dimensions (M)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="gbtn" title="Show / hide groups of objects (G)">Gruppi</button><button id="removed" title="Hide / show items whose name contains &quot;Rimosso&quot; (R)">Rimossi</button></span></div>
 <div id="groups"></div>
 <div id="labels"></div>
 <div id="tip"></div>
+<div id="fphint">WASD / frecce: muovi · Q / E: ruota · click: guarda col mouse (di nuovo click per fermare) · Shift: corri · F / Esc: esci</div>
 <script type="importmap">
 { "imports": { "three": "./three/build/three.module.js", "three/addons/": "./three/examples/jsm/" } }
 </script>
@@ -289,7 +295,19 @@ const enabledGroups = new Set((new URLSearchParams(location.search).get('g') || 
 let groupsInit = false;
 let groupDefs = [];                                               // [{ id, label, cat, variant }]
 let showRemoved = false;                                          // items named "...Rimosso..." are hidden by default
+let colliders = [];                                               // first-person walls/furniture, rebuilt with the meshes
+function addCollider(item) {                                      // only what can block a standing person: z between ~8" and ~62"
+  const Z0 = 8, Z1 = 62;
+  if (item.box || item.rbox) {
+    const b = item.box || item.rbox.b;
+    if (b[5] > Z0 && b[2] < Z1) colliders.push({ b: [b[0], b[1], b[3], b[4]] });
+  } else if (item.slab) {
+    const { o, z } = item.slab;
+    if (z[1] > Z0 && z[0] < Z1) colliders.push({ b: [Math.min(...o.map(p => p[0])), Math.min(...o.map(p => p[1])), Math.max(...o.map(p => p[0])), Math.max(...o.map(p => p[1]))], o });
+  }
+}
 function build(data) {
+  colliders = [];
   for (const o of [...model.children]) {
     model.remove(o);
     o.traverse(n => {
@@ -306,6 +324,7 @@ function build(data) {
     mesh.name = item.n;
     mesh.castShadow = mesh.receiveShadow = true;
     model.add(mesh);
+    addCollider(item);
     const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20),
       new THREE.LineBasicMaterial({ color: 0x2a2d33 }));
     model.add(edges);
@@ -332,7 +351,7 @@ async function load() {
     if (!groupsInit) { groupsInit = true; if (!new URLSearchParams(location.search).has('g')) for (const g of data.groups || []) if (g.on) enabledGroups.add(g.id); }   // default-on groups ("on": true in scene.json) only when the URL has no ?g
     current = data;
     build(data);
-    if (firstLoad) { firstLoad = false; applyInitialView(data); }   // later reloads keep your orbit
+    if (firstLoad) { firstLoad = false; applyInitialView(data); if (new URLSearchParams(location.search).has('fp')) enterFP(); }   // later reloads keep your orbit
     status.textContent = `${data.items.length} objects · ${new Date().toLocaleTimeString()}`;
   } catch (e) {
     console.error('scene load failed:', e);
@@ -588,6 +607,86 @@ function zoom(factor) {                                  // dolly toward / away 
 }
 document.getElementById('zin').onclick = () => zoom(0.8);
 document.getElementById('zout').onclick = () => zoom(1.25);
+
+// ---- first-person walk: WASD / arrows move, Q/E turn, click to look, spawn at scene.json "spawn" ({p:[x,y], yaw: degrees from +X, ccw}) ----
+const EYE = 66, RADIUS = 6, fpbtn = document.getElementById('fpbtn');
+let fp = null, fpLook = false;                                           // null = orbit mode; else { x, y, yaw, pitch, saved }
+function hitsSlab(o, x, y) {                             // circle vs. polygon (inside, or closer than RADIUS to an edge)
+  let inside = false;
+  for (let i = 0, j = o.length - 1; i < o.length; j = i++) {
+    const [xi, yi] = o[i], [xj, yj] = o[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    const dx = xj - xi, dy = yj - yi, t = Math.max(0, Math.min(1, ((x - xi) * dx + (y - yi) * dy) / (dx * dx + dy * dy || 1)));
+    if (Math.hypot(x - xi - t * dx, y - yi - t * dy) < RADIUS) return true;
+  }
+  return inside;
+}
+function blocked(x, y) {
+  for (const c of colliders) {
+    const b = c.b;
+    if (x < b[0] - RADIUS || x > b[2] + RADIUS || y < b[1] - RADIUS || y > b[3] + RADIUS) continue;
+    if (c.o) { if (hitsSlab(c.o, x, y)) return true; continue; }
+    const dx = Math.max(b[0] - x, 0, x - b[2]), dy = Math.max(b[1] - y, 0, y - b[3]);
+    if (dx * dx + dy * dy < RADIUS * RADIUS) return true;
+  }
+  return false;
+}
+function fpPlace() {
+  const cp = Math.cos(fp.pitch);
+  camera.position.set(fp.x, fp.y, EYE);
+  camera.lookAt(fp.x + Math.cos(fp.yaw) * cp, fp.y + Math.sin(fp.yaw) * cp, EYE + Math.sin(fp.pitch));
+}
+function enterFP() {
+  if (fp) return;
+  const sp = current?.spawn;
+  let x, y, yaw;
+  if (sp) { [x, y] = sp.p; yaw = (sp.yaw || 0) * Math.PI / 180; }
+  else { const { box } = bounds(), c = box.getCenter(new THREE.Vector3()); x = box.min.x + (box.max.x - box.min.x) * 0.15; y = box.min.y + (box.max.y - box.min.y) * 0.15; yaw = Math.atan2(c.y - y, c.x - x); }
+  fp = { x, y, yaw, pitch: 0, saved: { pos: camera.position.clone(), target: controls.target.clone(), fov: camera.fov } };
+  controls.enabled = false; held.clear();
+  camera.fov = 70; camera.updateProjectionMatrix();
+  document.body.classList.add('fp'); fpbtn.classList.add('active');
+  setParams({ fp: 1 }); fpPlace();
+}
+function exitFP() {
+  if (!fp) return;
+  const s = fp.saved; window.fpStopLook?.(); fp = null; held.clear();
+  controls.enabled = true;
+  setCam(s.pos, s.target, s.fov);
+  document.body.classList.remove('fp'); fpbtn.classList.remove('active');
+  setParams({ fp: null });
+}
+window.fpState = () => fp;                               // debug / tests
+fpbtn.onclick = () => fp ? exitFP() : enterFP();
+function stepFP(dt) {
+  const turn = (held.has('e') ? -1 : 0) + (held.has('q') ? 1 : 0);
+  fp.yaw += turn * dt * 1.6;                             // E = turn right (clockwise seen from above), Q = left
+  let f = 0, r = 0;
+  for (const k of held) { const m = MOVE[k]; if (m && k !== 'e' && k !== 'q') { r += m[0]; f += m[1]; } }
+  if (f || r) {
+    const sp = dt * (held.has('shift') ? 240 : 80) / Math.hypot(f, r);   // inches per second (80" = 2 m/s)
+    const dx = (Math.cos(fp.yaw) * f + Math.sin(fp.yaw) * r) * sp, dy = (Math.sin(fp.yaw) * f - Math.cos(fp.yaw) * r) * sp;
+    const stuck = blocked(fp.x, fp.y);                   // already inside something: let the user walk out
+    if (stuck || !blocked(fp.x + dx, fp.y)) fp.x += dx;
+    if (stuck || !blocked(fp.x, fp.y + dy)) fp.y += dy;
+  }
+  fpPlace();
+}
+{ const cv = renderer.domElement;                      // click to start looking around (mouse captured), click again (or Esc) to stop
+  const setLook = on => {
+    if (!fp) on = false;
+    fpLook = on; document.body.classList.toggle('look', on);
+    if (on) cv.requestPointerLock?.(); else if (document.pointerLockElement === cv) document.exitPointerLock();
+  };
+  cv.addEventListener('click', () => { if (fp) setLook(!fpLook); });
+  document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement !== cv && fpLook) setLook(false); });
+  addEventListener('mousemove', e => {
+    if (!fp || !fpLook) return;
+    fp.yaw -= e.movementX * 0.003;
+    fp.pitch = Math.max(-1.2, Math.min(1.2, fp.pitch - e.movementY * 0.003));
+  });
+  window.fpStopLook = () => setLook(false);
+}
 // ---- keyboard fly: WASD / arrows move on the floor plane, Q/E down/up, Shift = faster ----
 const MOVE = { w: [0, 1, 0], arrowup: [0, 1, 0], s: [0, -1, 0], arrowdown: [0, -1, 0],
                a: [-1, 0, 0], arrowleft: [-1, 0, 0], d: [1, 0, 0], arrowright: [1, 0, 0], e: [0, 0, 1], q: [0, 0, -1] };
@@ -595,6 +694,7 @@ const held = new Set();
 let lastT = 0;
 function stepMove(now) {
   const dt = Math.min((now - lastT) / 1000, 0.1); lastT = now;
+  if (fp) { stepFP(dt); return; }
   if (!held.size) return;
   let r = 0, f = 0, u = 0;
   for (const k of held) { const m = MOVE[k]; r += m[0]; f += m[1]; u += m[2]; }
@@ -615,10 +715,13 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => {
   const k = e.key.toLowerCase();
   held.delete(k); if (!e.shiftKey) held.delete('shift');
-  if (k in MOVE && !Object.keys(MOVE).some(x => held.has(x))) { held.clear(); saveCam(); }
+  if (k in MOVE && !Object.keys(MOVE).some(x => held.has(x))) { held.clear(); if (!fp) saveCam(); }
 });
 addEventListener('blur', () => held.clear());
 addEventListener('keydown', e => {
+  if (e.key === 'f' || e.key === 'F') return fpbtn.click();
+  if (e.key === 'Escape') return exitFP();
+  if (fp && /^[1-9+=_-]$/.test(e.key)) { if (/\d/.test(e.key)) exitFP(); else return; }
   if (e.key === '+' || e.key === '=') return zoom(0.8);
   if (e.key === '-' || e.key === '_') return zoom(1.25);
   if (e.key === 'm' || e.key === 'M') return document.getElementById('dims').click();
@@ -640,7 +743,8 @@ if (!window.STATIC_BUILD) {                              // versione statica (Cl
 }
 
 load();
-renderer.setAnimationLoop(now => { stepMove(now); controls.update(); renderer.render(scene, camera); placeLabels(); });
+renderer.setAnimationLoop(now => { stepMove(now); if (!fp) controls.update();   // in first person OrbitControls would re-aim the camera at its target
+   renderer.render(scene, camera); placeLabels(); });
 </script>
 </body>
 </html>
