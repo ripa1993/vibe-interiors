@@ -52,7 +52,7 @@
 <div id="labels"></div>
 <div id="tip"></div>
 <script type="importmap">
-{ "imports": { "three": "/three/build/three.module.js", "three/addons/": "/three/examples/jsm/" } }
+{ "imports": { "three": "./three/build/three.module.js", "three/addons/": "./three/examples/jsm/" } }
 </script>
 <script type="module">
 import * as THREE from 'three';
@@ -326,7 +326,7 @@ function applyCamera(cam) {
 
 async function load() {
   try {
-    const res = await fetch('/scene.json?t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch('scene.json?t=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
     current = data;
     build(data);
@@ -627,13 +627,15 @@ addEventListener('keydown', e => {
   if (i >= 0 && i < PRESETS.length && !e.metaKey && !e.ctrlKey) runPreset(i);
 });
 
-const es = new EventSource('/events');
-es.onopen = () => dot.className = 'live';
-es.onerror = () => dot.className = '';
-es.addEventListener('reload', () => {
-  dot.className = 'flash'; setTimeout(() => dot.className = 'live', 400);
-  load();
-});
+if (!window.STATIC_BUILD) {                              // versione statica (Cloudflare Pages): niente server, niente aggiornamento automatico
+  const es = new EventSource('events');
+  es.onopen = () => dot.className = 'live';
+  es.onerror = () => dot.className = '';
+  es.addEventListener('reload', () => {
+    dot.className = 'flash'; setTimeout(() => dot.className = 'live', 400);
+    load();
+  });
+}
 
 load();
 renderer.setAnimationLoop(now => { stepMove(now); controls.update(); renderer.render(scene, camera); placeLabels(); });

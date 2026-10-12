@@ -54,6 +54,7 @@ open http://localhost:4173
 - Editing `public/index.html` needs only a browser refresh (Cmd+R). Editing `server.js` needs a restart.
 - The server stops when the Mac restarts. It watches the **directory** (editors/writers replace files), debounced 150 ms.
 - Routes: `/` page, `/scene.json`, `/events` (SSE), `/three/*` (three.js), `/favicon.ico` (204).
+- The page uses only RELATIVE URLs (`scene.json`, `events`, `./three/...`, `textures/...`), so the same `public/index.html` also works from a static host under any subpath. `npm run build` (`scripts/build-static.js`) writes `dist/` for Cloudflare Pages: sets `window.STATIC_BUILD` (no EventSource), copies the scene, textures and the three.js modules it needs, adds `noindex` headers. Keep new asset URLs in scenes relative (`textures/x.png`, not `/textures/x.png`).
 
 ## Workflow for every model change
 1. Change the model with `mcp__sketchup__build_model`.

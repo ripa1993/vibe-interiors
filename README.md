@@ -72,6 +72,12 @@ Convenzioni nei colori del viewer:
 - **pavimento**: parquet a listoni in rovere (texture `public/textures/parquet-rovere.png`);
 - **arancio**: elementi da rimuovere nei lavori (nomi che terminano con `_Rimosso`, visibili con **Rimossi**).
 
+## Pubblicazione statica (Cloudflare Pages)
+
+`npm run build` crea `dist/` (ignorata da git): `index.html`, `scene.json`, le texture e i moduli di three.js, con percorsi relativi, `noindex`/`robots.txt` e nessun aggiornamento automatico (basta ricaricare la pagina). Non serve alcun server Node: funziona su qualunque hosting statico, anche in una sottocartella.
+
+Su Cloudflare Pages, collegando questo repository GitHub (Workers & Pages → Create → Pages → Connect to Git): *Build command* `npm run build`, *Build output directory* `dist`. Ogni `git push` ripubblica con l'ultimo `scene.json` committato (rigenerato con `node projects/casa-costanza/house.js`). Per limitare l'accesso: Settings → General → Enable access policy (Cloudflare Access / Zero Trust).
+
 ## Aggiungere un altro modello
 
 Crea `projects/<nome>/` con un `scene.json` (a mano, da uno script o dall'export dell'MCP di SketchUp) e avvia il server con quel percorso. Il formato e le regole di esportazione da SketchUp sono descritti in `CLAUDE.md`.

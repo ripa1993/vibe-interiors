@@ -88,7 +88,7 @@ const L = x => (695 + DY) + 0.233 * (x + 25);            // linea interna del te
 slab('/Piano/Pavimento', C.floor,
   [[-412, -50], [-19, -50], [-19, -581], [480, -581], [480, L(480) + 30], [-55, L(-55) + 30],
    [-55, 451 + DY], [-412, 451 + DY]], -10, 0);
-items[items.length - 1].tex = { url: '/textures/parquet-rovere.png', tile: 120 / 2.54 };   // parquet rovere a listoni (tile di 120 cm); il viewer lo mette sulle facce piane
+items[items.length - 1].tex = { url: 'textures/parquet-rovere.png', tile: 120 / 2.54 };   // parquet rovere a listoni (tile di 120 cm); il viewer lo mette sulle facce piane
 
 // ---------- SOGGIORNO 430 x 401, interno x 0..430, y 0..401 ----------
 // muro destro (prop terzi) su tutta l'altezza della casa
