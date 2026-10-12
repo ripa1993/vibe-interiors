@@ -24,13 +24,17 @@ const items = [];
 //   defGroup(id, etichetta, categoria, [variante])  -> gruppi con la stessa `variante` sono mutuamente esclusivi (es. cucina v1 / v2)
 //   group(id, () => { ...box()/tube()/slab()... })  -> tutto cio' che disegni dentro prende il gruppo `id`
 const GROUPS = [];
-const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord'];   // accesi al caricamento del viewer
+const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'antibagno-scarpiera', 'antibagno-elvarli', 'ingresso-attaccapanni', 'ingresso-stampe-mensola', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord', 'soggiorno-billy'];   // accesi al caricamento del viewer
 const defGroup = (id, label, cat, variant) => GROUPS.push(Object.assign({ id, label, cat }, variant ? { variant } : {}, DEFAULT_ON.includes(id) ? { on: true } : {}));
 const group = (id, fn) => { const from = items.length; fn(); for (let k = from; k < items.length; k++) items[k].g = id; };
 defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
 defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
 defGroup('attacchi-wc-piccolo', 'Attacchi WC piccolo', 'Attacchi');
 defGroup('wc-grande-arredo', 'WC grande · doccia, lavasciuga, water, bidet, mobile lavabo (sui attacchi esistenti)', 'WC grande');
+defGroup('antibagno-scarpiera', 'Antibagno WC grande · scarpiera MACKAPÄR (IKEA) sul muro ovest', 'WC grande');
+defGroup('antibagno-elvarli', 'Antibagno WC grande · guardaroba ELVARLI (IKEA) sul muro est', 'WC grande');
+defGroup('ingresso-attaccapanni', 'Ingresso · attaccapanni da parete moderno, dopo il calorifero', 'Ingresso');
+defGroup('ingresso-stampe-mensola', 'Ingresso · mensola alta e 3 stampe sul muro sud', 'Ingresso');
 defGroup('wc-piccolo-arredo', 'WC piccolo · bidet, water, lavabo da hotel (sui attacchi esistenti)', 'WC piccolo');
 defGroup('cucina-v1', 'Cucina v1 · penisola colazione', 'Cucina', 'cucina');   // le varianti della cucina sono mutuamente esclusive (stessa `variant`)
 defGroup('soggiorno-divano', 'Soggiorno · divano ad L + tappeto + lampada', 'Soggiorno', 'divano');
@@ -47,6 +51,7 @@ defGroup('letto-v1', 'Camera sud · letto IKEA Gladstad 160x200', 'Camera sud');
 defGroup('camera-nord', 'Camera nord · camera ospiti: libreria nella nicchia, divano letto, cassettiera, tavolino, tappeto', 'Camera nord');
 defGroup('tavolo', 'Soggiorno · tavolo allungabile + 4 sedie', 'Soggiorno');
 defGroup('soggiorno-libreria', 'Soggiorno · libreria a mensole nella nicchia', 'Soggiorno');
+defGroup('soggiorno-billy', 'Soggiorno · composizione BILLY (IKEA) sul muro sud, a ovest della porta', 'Soggiorno');
 defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno', 'tv');
 defGroup('soggiorno-tv-est', 'Soggiorno · TV a est, parete attrezzata', 'Soggiorno', 'tv');   // varianti: una esclude l'altra
 defGroup('cucina-v4', 'Cucina v4 · come la v3, frigo e trasversale scambiati', 'Cucina', 'cucina');
@@ -398,7 +403,12 @@ require('./parete-testata.js')({ box, group });
 require('./mensole-testata.js')({ box, tube, rbox, group });
 require('./besta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./porta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./billy-soggiorno.js')({ box, tube, group });
 require('./camera-nord.js')({ box, tube, rbox, slab, group, L });
+require('./scarpiera-antibagno.js')({ box, tube, group });
+require('./armadio-elvarli.js')({ box, tube, group });
+require('./attaccapanni-ingresso.js')({ box, tube, group });
+require('./ingresso-decor.js')({ box, tube, group });
 
 // ---------- scena ----------
 const scene = {
