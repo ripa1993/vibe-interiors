@@ -59,6 +59,7 @@ defGroup('ripostiglio-pulizia', 'Ripostiglio est · pulizia (scope, aspirapolver
 defGroup('luci', 'Illuminazione · punti luce a soffitto e applique in tutte le stanze', 'Illuminazione');
 defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno', 'tv');
 defGroup('soggiorno-tv-est', 'Soggiorno · TV a est, parete attrezzata', 'Soggiorno', 'tv');   // varianti: una esclude l'altra
+defGroup('cucina-v5', 'Cucina v5 · come la v3, penisola tondeggiante al posto del bancone a sud', 'Cucina', 'cucina');
 defGroup('cucina-v4', 'Cucina v4 · come la v3, frigo e trasversale scambiati', 'Cucina', 'cucina');
 defGroup('cucina-v3', 'Cucina v3 · come la v1, senza penisola', 'Cucina', 'cucina');
 defGroup('cucina-v2', 'Cucina v2 · linea ovest + penisola stretta', 'Cucina', 'cucina');
@@ -391,6 +392,7 @@ require('./cucina-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v3.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v4.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./cucina-v5.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./soggiorno-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
