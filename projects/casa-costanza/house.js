@@ -24,7 +24,7 @@ const items = [];
 //   defGroup(id, etichetta, categoria, [variante])  -> gruppi con la stessa `variante` sono mutuamente esclusivi (es. cucina v1 / v2)
 //   group(id, () => { ...box()/tube()/slab()... })  -> tutto cio' che disegni dentro prende il gruppo `id`
 const GROUPS = [];
-const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'antibagno-scarpiera', 'antibagno-elvarli', 'ingresso-attaccapanni', 'ingresso-stampe-mensola', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord', 'soggiorno-billy', 'ripostiglio-stagione', 'ripostiglio-pulizia', 'luci'];   // accesi al caricamento del viewer
+const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'antibagno-scarpiera', 'antibagno-elvarli', 'ingresso-attaccapanni', 'ingresso-stampe-mensola', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord', 'soggiorno-billy', 'ripostiglio-stagione', 'ripostiglio-pulizia', 'luci', 'bovindo-salottino'];   // accesi al caricamento del viewer
 const defGroup = (id, label, cat, variant) => GROUPS.push(Object.assign({ id, label, cat }, variant ? { variant } : {}, DEFAULT_ON.includes(id) ? { on: true } : {}));
 const lights = [];                                                  // sorgenti per la modalita' notte del viewer (cm -> pollici); vedi luci.js
 const light = d => lights.push(Object.assign({ t: 'spot', g: 'luci' }, d, { p: d.p.map(v => +(v / 2.54).toFixed(3)) }));
@@ -57,6 +57,8 @@ defGroup('soggiorno-billy', 'Soggiorno · composizione BILLY (IKEA) sul muro sud
 defGroup('ripostiglio-stagione', 'Ripostiglio ovest · cambio di stagione (asta, scatole, valigie)', 'Ripostigli');
 defGroup('ripostiglio-pulizia', 'Ripostiglio est · pulizia (scope, aspirapolvere, detersivi)', 'Ripostigli');
 defGroup('luci', 'Illuminazione · punti luce a soffitto e applique in tutte le stanze', 'Illuminazione');
+defGroup('bovindo-salottino', 'Ala · salottino davanti al bovindo: tavolino tondo antico + 2 poltrone antiche + tappeto', 'Ala in alto', 'salottino');
+defGroup('bovindo-salottino-1', 'Ala · salottino davanti al bovindo, variante con UNA poltrona', 'Ala in alto', 'salottino');
 defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno', 'tv');
 defGroup('soggiorno-tv-est', 'Soggiorno · TV a est, parete attrezzata', 'Soggiorno', 'tv');   // varianti: una esclude l'altra
 defGroup('cucina-v5', 'Cucina v5 · come la v3, penisola tondeggiante al posto del bancone a sud', 'Cucina', 'cucina');
@@ -414,6 +416,8 @@ require('./billy-soggiorno.js')({ box, tube, group });
 require('./ripostigli.js')({ box, tube, rbox, group });
 for (const i of items) if (i.n === '/RipStagione/Luce' || i.n === '/RipPulizia/Luce') i.em = 1;   // barre LED luminose in modalita' notte
 require('./luci.js')({ box, tube, group, L, items, light });
+require('./bovindo-salottino.js')({ box, tube, slab, group });
+require('./bovindo-salottino.js')({ box, tube, slab, group }, { id: 'bovindo-salottino-1', prefix: '/Salottino1/', chairs: [['Poltrona', 26, 683, [-0.469, -0.883]]], tx: 12, ty: 622 });
 require('./camera-nord.js')({ box, tube, rbox, slab, group, L });
 require('./scarpiera-antibagno.js')({ box, tube, group });
 require('./armadio-elvarli.js')({ box, tube, group });
