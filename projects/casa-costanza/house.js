@@ -64,6 +64,7 @@ defGroup('soggiorno-tv-est', 'Soggiorno · TV a est, parete attrezzata', 'Soggio
 defGroup('cucina-v5', 'Cucina v5 · come la v3, penisola tondeggiante al posto del bancone a sud', 'Cucina', 'cucina');
 defGroup('cucina-v4', 'Cucina v4 · come la v3, frigo e trasversale scambiati', 'Cucina', 'cucina');
 defGroup('cucina-v3', 'Cucina v3 · come la v1, senza penisola', 'Cucina', 'cucina');
+defGroup('cucina-v6', 'Cucina v6 · come la v2, con la gamba corta della L della v4 (angolo + trasversale + frigo + giorno)', 'Cucina', 'cucina');
 defGroup('cucina-v2', 'Cucina v2 · linea ovest + penisola stretta', 'Cucina', 'cucina');
 const box = (n, c, x0, y0, z0, x1, y1, z1) =>
   items.push({ n, c, box: [x0, y0, z0, x1, y1, z1].map(inch) });
@@ -392,6 +393,7 @@ require('./wc-grande.js')({ box, tube, rbox, slab, tray, group });
 require('./wc-piccolo.js')({ box, tube, rbox, slab, tray, group, L, XT });
 require('./cucina-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./cucina-v6.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v3.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v4.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v5.js')({ box, tube, rbox, slab, group, n: yT0 });
