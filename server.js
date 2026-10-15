@@ -9,7 +9,7 @@ const PORT = Number(process.argv[3] || process.env.PORT || 4173);
 const PUBLIC = path.join(__dirname, 'public');
 const THREE = path.join(__dirname, 'node_modules', 'three');
 
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css' };
 const clients = new Set();
 
 function send(res, code, type, body) {
@@ -37,7 +37,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/scene.json') return serveFile(res, SCENE);
   if (url.pathname.startsWith('/vendor/')) {                       // path tracer (Render button): only the two packages it needs
     const f = path.normalize(path.join(__dirname, 'node_modules', url.pathname.slice('/vendor/'.length)));
-    if (!/node_modules[\\/](three-gpu-pathtracer|three-mesh-bvh)[\\/]/.test(f)) return send(res, 403, 'text/plain', 'forbidden');
+    if (!/node_modules[\\/](three-gpu-pathtracer|three-mesh-bvh|oidn-web|oidn-weights|@pmndrs[\\/]upscaler)[\\/]/.test(f)) return send(res, 403, 'text/plain', 'forbidden');
     return serveFile(res, f);
   }
   if (url.pathname.startsWith('/three/')) {

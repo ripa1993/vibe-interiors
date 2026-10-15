@@ -26,15 +26,18 @@ fs.copyFileSync(SCENE, path.join(OUT, 'scene.json'));
 if (fs.existsSync(path.join(ROOT, 'public/textures'))) copyDir(path.join(ROOT, 'public/textures'), path.join(OUT, 'textures'));
 
 // three.js servito dallo stesso sito (stessi percorsi relativi di server.js): serve solo build/ (moduli ES) e le utility OrbitControls
-copyDir(path.join(THREE, 'build'), path.join(OUT, 'three/build'), f => /three\.(module|core)\.js$/.test(f));
+copyDir(path.join(THREE, 'build'), path.join(OUT, 'three/build'), f => /three\.(module|core|webgpu|tsl)\.js$/.test(f));   // webgpu + tsl: WebGPU path tracer
 copyDir(path.join(THREE, 'examples/jsm/controls'), path.join(OUT, 'three/examples/jsm/controls'));
 copyDir(path.join(THREE, 'examples/jsm/postprocessing'), path.join(OUT, 'three/examples/jsm/postprocessing'), f => /\.js$/.test(f));   // path tracer (Pass.js) + occlusione ambientale (EffectComposer, GTAOPass)
 copyDir(path.join(THREE, 'examples/jsm/shaders'), path.join(OUT, 'three/examples/jsm/shaders'), f => /(Copy|Output|GTAO|PoissonDenoise)Shader\.js$/.test(f));
 fs.mkdirSync(path.join(OUT, 'three/examples/jsm/math'), { recursive: true });
 fs.copyFileSync(path.join(THREE, 'examples/jsm/math/SimplexNoise.js'), path.join(OUT, 'three/examples/jsm/math/SimplexNoise.js'));
-for (const pkg of ['three-gpu-pathtracer', 'three-mesh-bvh']) {          // path tracer (pulsante Render): solo il bundle ES
-  fs.mkdirSync(path.join(OUT, 'vendor', pkg, 'build'), { recursive: true });
-  fs.copyFileSync(path.join(ROOT, 'node_modules', pkg, 'build/index.module.js'), path.join(OUT, 'vendor', pkg, 'build/index.module.js'));
+// path tracers (pulsante Render): sorgenti ES delle librerie (la versione WebGPU non ha un bundle), il denoiser OIDN con i soli pesi usati
+for (const pkg of ['three-gpu-pathtracer', 'three-mesh-bvh']) copyDir(path.join(ROOT, 'node_modules', pkg, 'src'), path.join(OUT, 'vendor', pkg, 'src'), f => /\.js$/.test(f));
+for (const [pkg, files] of [['oidn-web', ['dist/oidn.js']], ['@pmndrs/upscaler', null], ['oidn-weights', ['rt_hdr_alb_nrm_small.tza']]]) {
+  const from = path.join(ROOT, 'node_modules', pkg), to = path.join(OUT, 'vendor', pkg);
+  if (!files) { copyDir(path.join(from, 'dist'), path.join(to, 'dist'), f => /\.js$/.test(f)); continue; }
+  for (const f of files) { fs.mkdirSync(path.dirname(path.join(to, f)), { recursive: true }); fs.copyFileSync(path.join(from, f), path.join(to, f)); }
 }
 
 // intestazioni Cloudflare Pages: niente indicizzazione, niente cache lunga su scene.json

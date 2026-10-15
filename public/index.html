@@ -7,6 +7,7 @@
 <style>
   html, body { margin: 0; height: 100%; background: #f4f5f7; font: 13px -apple-system, system-ui, sans-serif; }
   #view { position: fixed; inset: 0; }
+  #rtgpu { position: absolute; inset: 0; width: 100%; height: 100%; display: none; pointer-events: none; }   /* WebGPU path tracer canvas, on top of the WebGL one */
   #bar { position: fixed; top: 10px; left: 10px; display: flex; gap: 8px; align-items: center;
          background: rgba(255,255,255,.9); border: 1px solid #d5d8de; border-radius: 8px; padding: 6px 10px; }
   #bar { z-index: 5; }
@@ -88,7 +89,10 @@
 <div id="fphint">WASD / frecce: muovi · Q / E: ruota · click: guarda col mouse (di nuovo click per fermare) · Shift: corri · F / Esc: esci</div>
 <script type="importmap">
 { "imports": { "three": "./three/build/three.module.js", "three/addons/": "./three/examples/jsm/", "three/examples/jsm/": "./three/examples/jsm/",
-  "three-mesh-bvh": "./vendor/three-mesh-bvh/build/index.module.js", "three-gpu-pathtracer": "./vendor/three-gpu-pathtracer/build/index.module.js" } }
+  "three/webgpu": "./three/build/three.webgpu.js", "three/tsl": "./three/build/three.tsl.js",
+  "three-mesh-bvh": "./vendor/three-mesh-bvh/src/index.js", "three-mesh-bvh/webgpu": "./vendor/three-mesh-bvh/src/webgpu/index.js",
+  "three-gpu-pathtracer": "./vendor/three-gpu-pathtracer/src/index.js", "three-gpu-pathtracer/webgpu": "./vendor/three-gpu-pathtracer/src/webgpu/index.js",
+  "oidn-web": "./vendor/oidn-web/dist/oidn.js", "@pmndrs/upscaler": "./vendor/@pmndrs/upscaler/dist/index.js" } }
 </script>
 <script type="module">
 import * as THREE from 'three';
@@ -134,6 +138,7 @@ function resize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   window.aoResize?.(w, h);                              // composer of the AO button (defined later)
+  window.rtwResize?.(w, h);                             // WebGPU path tracer canvas
 }
 addEventListener('resize', resize);
 resize();
@@ -486,6 +491,7 @@ async function rtSetup() {                              // (re)build the BVH fro
     if (!rt.on || rt.busy) { if (rt.on) rtSetup(); return; }
     rt.busy = true; rtBtn.textContent = 'Render…';
     try {
+      if (rtw.on) { await rtwSetup(); rt.busy = false; return; }
       hemi.visible = false;                              // the path tracer ignores it: sky light comes from the environment instead
       const G = rt.mod.GradientEquirectTexture;
       rt.env = rt.env || new G(64);
@@ -500,18 +506,23 @@ async function rtSetup() {                              // (re)build the BVH fro
 }
 async function rtOn() {
   rtBtn.textContent = 'Render…';
+  rtw.on = false;
+  if (navigator.gpu && new URLSearchParams(location.search).get('rtgl') !== '1') {   // WebGPU path tracer first (?rtgl=1 forces the WebGL one)
+    try { await rtwInit(); rtw.on = true; } catch (e) { console.error('WebGPU path tracer unavailable, falling back to WebGL:', e); }
+  }
   try {
+    if (rtw.on) throw 'gpu';
     rt.mod = rt.mod || await import('three-gpu-pathtracer');
     if (!rt.pt) {
       rt.pt = new rt.mod.WebGLPathTracer(renderer);
       Object.assign(rt.pt, { bounces: 4, renderScale: rtScale(), dynamicLowRes: false, renderToCanvas: false, lowResScale: 0.3, filterGlossyFactor: 0.6, minSamples: 4, fadeDuration: 300, renderDelay: 50 });
     }
-  } catch (e) { console.error('path tracer not available:', e); rtBtn.textContent = 'Render'; return; }
+  } catch (e) { if (e !== 'gpu') { console.error('path tracer not available:', e); rtBtn.textContent = 'Render'; return; } }
   rt.on = true; rtBtn.classList.add('active'); setParams({ rt: 1 });
   buildLights(current); applyNight();                     // lights with path-tracer intensity / decay (applyNight triggers rtSetup)
 }
 function rtOff() {
-  rt.on = false; rtBtn.classList.remove('active'); rtBtn.textContent = 'Render'; setParams({ rt: null });
+  rt.on = false; if (rtw.pt) { rtw.pt.pause = true; rtw.canvas.style.display = 'none'; } rtw.on = false; rtBtn.classList.remove('active'); rtBtn.textContent = 'Render'; setParams({ rt: null });
   scene.environment = null; hemi.visible = true;
   renderer.toneMapping = THREE.NoToneMapping; renderer.toneMappingExposure = 1;
   if (current) buildLights(current);
@@ -526,7 +537,7 @@ const dn = { phiK: 6, on: new URLSearchParams(location.search).get('dn') !== '0'
 window.dn = dn;                                             // exposed for tuning from the console / headless tests
 const dnBtn = document.getElementById('dnbtn');
 dnBtn.classList.toggle('active', dn.on);
-dnBtn.onclick = () => { dn.on = !dn.on; dnBtn.classList.toggle('active', dn.on); setParams({ dn: dn.on ? null : 0 }); };
+dnBtn.onclick = () => { dn.on = !dn.on; dnBtn.classList.toggle('active', dn.on); setParams({ dn: dn.on ? null : 0 }); rtw.pt?.setDenoiser(dn.on ? rtw.den : null); };
 const dnQuadScene = new THREE.Scene(), dnCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 const dnQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); dnQuad.frustumCulled = false; dnQuadScene.add(dnQuad);
 const dnGMat = new THREE.ShaderMaterial({
@@ -620,9 +631,62 @@ function dnRender(tex, samples, w, h, raw) {                      // filter `tex
   o.tDen.value = src; o.tRaw.value = tex; o.uSize.value.set(w, h); o.uMix.value = raw ? 0 : Math.max(0.25, 1 - samples / 512);
   renderer.setRenderTarget(null); renderer.render(dnQuadScene, dnCam);
 }
+
+// ---- WebGPU path tracer (three-gpu-pathtracer/webgpu): second canvas with a WebGPURenderer on top of the WebGL one, same Scene object. Wavefront kernels, OIDN neural denoiser (oidn-web), ----
+// loaded on demand. The WebGL path tracer above stays as the fallback when navigator.gpu is missing (or with ?rtgl=1). Lights keep the same units (decay 2, intensity x RT_K).
+const rtw = { on: false, pt: null, r: null, den: null, canvas: null, W: null, P: null };
+window.rtwResize = (w, h) => rtwResize(w, h); window.rtw = rtw;
+async function rtwInit() {
+  if (rtw.pt) { rtw.pt.pause = false; rtw.canvas.style.display = 'block'; return; }
+  const [W, P, O] = await Promise.all([import('three/webgpu'), import('three-gpu-pathtracer/webgpu'), import('oidn-web')]);
+  const canvas = document.createElement('canvas'); canvas.id = 'rtgpu'; view.appendChild(canvas);
+  const r = new W.WebGPURenderer({ canvas, antialias: false });
+  r.toneMapping = THREE.ACESFilmicToneMapping;
+  await r.init();
+  r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.setSize(view.clientWidth, view.clientHeight);
+  const pt = new P.WebGPUPathTracer(r);
+  Object.assign(pt, { maxBounces: 6, renderScale: rtwScale() });
+  const den = new P.OIDNDenoiser({ initUNetFromURL: O.initUNetFromURL, auxWeightsUrl: './vendor/oidn-weights/rt_hdr_alb_nrm_small.tza' });
+  if (dn.on) pt.setDenoiser(den);
+  Object.assign(rtw, { W, P, r, pt, den, canvas });
+  canvas.style.display = 'block';
+}
+const RTW_BUDGET = (+new URLSearchParams(location.search).get('rpx') || 2.5) * 1e6;   // WebGPU: path slots per frame are fixed, so fewer pixels = faster convergence; 2.5 MP default
+function rtwScale() { return Math.min(1, Math.sqrt(RTW_BUDGET / (view.clientWidth * view.clientHeight * Math.min(devicePixelRatio, 2) ** 2))); }
+function gradientEnv(top, bottom) {                         // tiny equirect sky (64 x 32 float): top colour at the zenith, bottom colour at the nadir
+  const w = 64, h = 32, d = new Float32Array(w * h * 4), a = new THREE.Color(top), b = new THREE.Color(bottom), c = new THREE.Color();
+  for (let y = 0; y < h; y++) { c.copy(b).lerp(a, y / (h - 1)); for (let x = 0; x < w; x++) d.set([c.r, c.g, c.b, 1], (y * w + x) * 4); }
+  const t = new THREE.DataTexture(d, w, h, THREE.RGBAFormat, THREE.FloatType);
+  t.mapping = THREE.EquirectangularReflectionMapping; t.minFilter = t.magFilter = THREE.LinearFilter; t.needsUpdate = true; return t;
+}
+async function rtwSetup() {                                  // (re)capture the scene: BVH, textures, lights, environment
+  hemi.visible = false;
+  rtw.env?.dispose();
+  rtw.env = gradientEnv(night ? 0x1a2036 : 0xbcd2f0, night ? 0x0a0c12 : 0xd9dadc);
+  scene.environment = rtw.env; scene.environmentIntensity = night ? 0.15 : 1.1;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = rtw.r.toneMappingExposure = night ? 0.75 : 0.8;
+  rtw.pt.pause = false; rtw.pt.setScene(scene, camera);
+  rtw.pt.renderScale = rtwScale();
+  rt.last = '';
+}
+function rtwResize(w, h) { rtw.r?.setSize(w, h); }
+function rtwFrame() {
+  if (!rtw.pt || rt.busy) return false;
+  camera.updateMatrixWorld();
+  const key = [...camera.position.toArray(), ...camera.quaternion.toArray(), camera.fov, view.clientWidth].map(v => +v.toFixed(3)).join(',');
+  const sc = rtwScale(); if (sc !== rtw.pt.renderScale) rtw.pt.renderScale = sc;
+  if (key !== rt.last) { rt.last = key; rtw.pt.updateCamera(); }
+  rtw.pt.renderSample();
+  if ((rt.tick = (rt.tick || 0) + 1) % 90 === 0 && !rtw.counting) {                // sample count: a GPU read-back, so only now and then
+    rtw.counting = true;
+    rtw.pt.getSampleCountsAsync().then(c => { rtBtn.textContent = 'Render · ' + Math.round(c.avg) + (rtw.den?.running ? ' · denoise' : ''); }).catch(() => {}).finally(() => { rtw.counting = false; });
+  }
+  return true;
+}
 const RT_BUDGET = (+new URLSearchParams(location.search).get('rpx') || 0.8) * 1e6;   // path-traced pixels per sample (?rpx=<megapixels>): full screen on a Retina display is 10+ MP, which is why it crawled
 function rtScale() { return Math.min(1, Math.sqrt(RT_BUDGET / (view.clientWidth * view.clientHeight * devicePixelRatio ** 2))); }
 function rtFrame() {                                    // one animation frame in path-tracing mode; false = not ready, fall back to raster
+  if (rtw.on) return rtwFrame();
   if (!rt.on || !rt.pt || rt.busy) return false;
   camera.updateMatrixWorld();
   const key = [...camera.position.toArray(), ...camera.quaternion.toArray(), camera.fov, view.clientWidth].map(v => +v.toFixed(3)).join(',');   // rounded: OrbitControls damping jitters at 1e-7 every frame, which would reset the accumulation forever
