@@ -392,8 +392,8 @@ const XT = 173;   // x della faccia ovest del tramezzo tra antibagno/WC piccolo 
 require('./wc-grande.js')({ box, tube, rbox, slab, tray, group });
 require('./wc-piccolo.js')({ box, tube, rbox, slab, tray, group, L, XT });
 require('./cucina-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
-require('./cucina-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
-require('./cucina-v6.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./cucina-v2.js')({ box, tube, rbox, slab, group, n: yT0, light });
+require('./cucina-v6.js')({ box, tube, rbox, slab, group, n: yT0, light });
 require('./cucina-v3.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v4.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v5.js')({ box, tube, rbox, slab, group, n: yT0 });
@@ -416,7 +416,7 @@ require('./besta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./porta-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./billy-soggiorno.js')({ box, tube, group });
 require('./ripostigli.js')({ box, tube, rbox, group });
-for (const i of items) if (i.n === '/RipStagione/Luce' || i.n === '/RipPulizia/Luce') i.em = 1;   // barre LED luminose in modalita' notte
+for (const i of items) if (i.n === '/RipStagione/Luce' || i.n === '/RipPulizia/Luce' || /\/Sospensione_Paralume/.test(i.n)) i.em = 1;   // barre LED luminose in modalita' notte
 require('./luci.js')({ box, tube, group, L, items, light });
 require('./bovindo-salottino.js')({ box, tube, slab, group });
 require('./bovindo-salottino.js')({ box, tube, slab, group }, { id: 'bovindo-salottino-1', prefix: '/Salottino1/', chairs: [['Poltrona', 26, 683, [-0.469, -0.883]]], tx: 12, ty: 622 });

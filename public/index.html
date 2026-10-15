@@ -19,7 +19,8 @@
   #dimctl { display: flex; gap: 4px; margin-left: 6px; padding-left: 10px; border-left: 1px solid #d5d8de; }
   button.on { background: #d9480f; border-color: #d9480f; color: #fff; }
   #aobtn.active { background: #4a4f5a; border-color: #4a4f5a; color: #fff; }
-  #rtbtn.active { background: #0d6e3a; border-color: #0d6e3a; color: #fff; }
+  #rtbtn.active, #dnbtn.active { background: #0d6e3a; border-color: #0d6e3a; color: #fff; }
+  #dnbtn { display: none; } #rtbtn.active ~ #dnbtn { display: inline-block; }
   #nightbtn.active { background: #1f2540; border-color: #1f2540; color: #ffd9a0; }
   #fpbtn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
   #fphint { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: none; z-index: 5; pointer-events: none;
@@ -76,7 +77,7 @@
 <div id="bar"><span id="dot"></span><span id="status">connecting…</span><button id="morebtn" title="Views, zoom, dimensions">Views ▾</button>
   <span id="views"></span>
   <span id="aoctl"><button id="aobtn" title="Occlusione ambientale: ombre di contatto negli angoli (O)">AO</button></span>
-  <span id="rtctl"><button id="rtbtn" title="Render path tracing: luce globale, ombre morbide (T)">Render</button></span>
+  <span id="rtctl"><button id="rtbtn" title="Render path tracing: luce globale, ombre morbide (T)">Render</button> <button id="dnbtn" class="active" title="Denoiser (filtro a-trous guidato da normali e profondità) sul render">Denoise</button></span>
   <span id="nightctl"><button id="nightbtn" title="Modalità notte: accende le luci (N)">Notte</button></span>
   <span id="fpctl"><button id="fpbtn" title="Prima persona: cammina nella casa (F)">Prima persona</button></span>
   <span id="zoom"><button id="zin" title="Zoom in (+)">+</button><button id="zout" title="Zoom out (−)">−</button></span>
@@ -418,8 +419,10 @@ function buildLights(data) {
     const gs = [].concat(L.g || []);
     if (gs.length && !gs.some(id => enabledGroups.has(id))) continue;
     const col = new THREE.Color(...(L.c || [255, 255, 255]).map(v => v / 255)).convertSRGBToLinear();
-    const sl = new THREE.SpotLight(col, (L.i ?? 200) * (rt.on ? RT_K : 1), L.r || 0, (L.a ?? 60) * Math.PI / 180, L.pen ?? 0.5, rt.on ? 2 : 1);   // path tracer: physical decay 2, intensity scaled so a room looks as bright as in the raster view
+    const Spot = rt.on && rt.mod?.PhysicalSpotLight ? rt.mod.PhysicalSpotLight : THREE.SpotLight;   // path tracer: PhysicalSpotLight has a radius (soft shadows)
+    const sl = new Spot(col, (L.i ?? 200) * (rt.on ? RT_K : 1), L.r || 0, (L.a ?? 60) * Math.PI / 180, L.pen ?? 0.5, rt.on ? 2 : 1);   // path tracer: physical decay 2, intensity scaled so a room looks as bright as in the raster view
     sl.position.set(...L.p);
+    if (rt.on && 'radius' in sl) sl.radius = L.rad ?? 3;                      // 3" (~8 cm) emitter: penumbrae instead of razor-sharp shadows
     const d = new THREE.Vector3(...(L.d || [0, 0, -1])).normalize();
     sl.target.position.copy(sl.position).addScaledVector(d, 100);
     if (L.sh) {
@@ -488,6 +491,7 @@ async function rtSetup() {                              // (re)build the BVH fro
       rt.env = rt.env || new G(64);
       rt.env.topColor.set(night ? 0x1a2036 : 0xbcd2f0); rt.env.bottomColor.set(night ? 0x0a0c12 : 0xd9dadc); rt.env.update();
       scene.environment = rt.env; scene.environmentIntensity = night ? 0.15 : 1.1;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = night ? 1.5 : 1.0;   // filmic curve: no clipped highlights / flat yellow cast; the path tracer's output pass applies it
       rt.pt.setScene(scene, camera);                     // synchronous BVH build: freezes the page for a few seconds on a big scene (the async build needs a worker)
       rt.last = '';
     } catch (e) { console.error('path tracer setup failed:', e); rtOff(); }
@@ -500,7 +504,7 @@ async function rtOn() {
     rt.mod = rt.mod || await import('three-gpu-pathtracer');
     if (!rt.pt) {
       rt.pt = new rt.mod.WebGLPathTracer(renderer);
-      Object.assign(rt.pt, { bounces: 5, renderScale: 0.6, dynamicLowRes: true, lowResScale: 0.25, filterGlossyFactor: 0.5, minSamples: 3, fadeDuration: 300, renderDelay: 50 });
+      Object.assign(rt.pt, { bounces: 4, renderScale: rtScale(), dynamicLowRes: false, renderToCanvas: false, lowResScale: 0.3, filterGlossyFactor: 0.6, minSamples: 4, fadeDuration: 300, renderDelay: 50 });
     }
   } catch (e) { console.error('path tracer not available:', e); rtBtn.textContent = 'Render'; return; }
   rt.on = true; rtBtn.classList.add('active'); setParams({ rt: 1 });
@@ -509,16 +513,126 @@ async function rtOn() {
 function rtOff() {
   rt.on = false; rtBtn.classList.remove('active'); rtBtn.textContent = 'Render'; setParams({ rt: null });
   scene.environment = null; hemi.visible = true;
+  renderer.toneMapping = THREE.NoToneMapping; renderer.toneMappingExposure = 1;
   if (current) buildLights(current);
   applyNight();
 }
 rtBtn.onclick = () => rt.on ? rtOff() : rtOn();
+
+// ---- denoiser for the path-traced image: edge-avoiding a-trous wavelet filter guided by a raster G-buffer (view-space normal + view depth) and by the colour itself ----
+// The path tracer no longer draws to the canvas (renderToCanvas = false): every frame its accumulated float target goes through a few filter passes, is mixed back towards the raw
+// image as samples pile up (so converged renders keep their texture detail) and is tone mapped / output by a final pass. ?dn=0 starts with the denoiser off, the Denoise button toggles it.
+const dn = { phiK: 6, on: new URLSearchParams(location.search).get('dn') !== '0', w: 0, h: 0, dirty: true };
+window.dn = dn;                                             // exposed for tuning from the console / headless tests
+const dnBtn = document.getElementById('dnbtn');
+dnBtn.classList.toggle('active', dn.on);
+dnBtn.onclick = () => { dn.on = !dn.on; dnBtn.classList.toggle('active', dn.on); setParams({ dn: dn.on ? null : 0 }); };
+const dnQuadScene = new THREE.Scene(), dnCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const dnQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); dnQuad.frustumCulled = false; dnQuadScene.add(dnQuad);
+const dnGMat = new THREE.ShaderMaterial({
+  side: THREE.DoubleSide,
+  vertexShader: 'varying vec3 vN; varying float vD; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vD = -mv.z; gl_Position = projectionMatrix * mv; }',
+  fragmentShader: 'varying vec3 vN; varying float vD; void main(){ vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n; gl_FragColor = vec4(n, vD); }',
+});
+const DN_HEAD = 'precision highp float; precision highp sampler2D; varying vec2 vUv;';
+const dnPassMat = new THREE.ShaderMaterial({
+  uniforms: { tColor: { value: null }, tG: { value: null }, uStep: { value: 1 }, uPhi: { value: 0.3 }, uFirst: { value: 1 }, uP: { value: new THREE.Vector2() } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: DN_HEAD + `
+    uniform sampler2D tColor, tG; uniform float uStep, uPhi; uniform int uFirst; uniform vec2 uP;
+    float lum(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+    vec3 cmp(vec3 c){ return c / (1.0 + lum(c)); }
+    vec3 vpos(ivec2 q, float d, ivec2 sz){ vec2 ndc = (vec2(q) + 0.5) / vec2(sz) * 2.0 - 1.0; return vec3(ndc.x * d / uP.x, ndc.y * d / uP.y, -d); }
+    void main(){
+      ivec2 p = ivec2(gl_FragCoord.xy), sz = textureSize(tColor, 0);
+      vec4 g0 = texelFetch(tG, p, 0); vec3 c0 = texelFetch(tColor, p, 0).rgb;
+      if (g0.a <= 0.0) { gl_FragColor = vec4(c0, 1.0); return; }
+      if (uFirst == 1) {                                   // despeckle fireflies: clamp the centre to a multiple of its 8-neighbour mean
+        float m = 0.0;
+        for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) if (dx != 0 || dy != 0) m += lum(texelFetch(tColor, clamp(p + ivec2(dx, dy), ivec2(0), sz - 1), 0).rgb);
+        m /= 8.0; c0 *= min(1.0, (m * 4.0 + 0.02) / max(lum(c0), 1e-4));
+      }
+      vec3 n0 = g0.xyz; float d0 = g0.a; vec3 p0 = vpos(p, d0, sz), cc = cmp(c0);
+      float tol = 0.02 * d0 + 0.05;
+      float kw[3] = float[3](1.0, 0.6667, 0.1667);
+      vec3 sum = vec3(0.0); float ws = 0.0;
+      for (int dy = -2; dy <= 2; dy++) for (int dx = -2; dx <= 2; dx++) {
+        ivec2 q = p + ivec2(dx, dy) * int(uStep);
+        if (q.x < 0 || q.y < 0 || q.x >= sz.x || q.y >= sz.y) continue;
+        vec3 cq; float w = kw[abs(dx)] * kw[abs(dy)];
+        if (dx == 0 && dy == 0) cq = c0;
+        else {
+          vec4 gq = texelFetch(tG, q, 0); if (gq.a <= 0.0) continue;
+          cq = texelFetch(tColor, q, 0).rgb;
+          w *= pow(max(dot(n0, gq.xyz), 0.0), 24.0) * exp(-abs(dot(n0, vpos(q, gq.a, sz) - p0)) / tol);
+          vec3 dc = cmp(cq) - cc; w *= exp(-dot(dc, dc) / (uPhi * uPhi));
+        }
+        sum += cq * w; ws += w;
+      }
+      gl_FragColor = vec4(sum / ws, 1.0);
+    }`,
+  depthTest: false, depthWrite: false,
+});
+const dnOutMat = new THREE.ShaderMaterial({
+  uniforms: { tDen: { value: null }, tRaw: { value: null }, uMix: { value: 1 }, uSize: { value: new THREE.Vector2() } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: DN_HEAD + `
+    uniform sampler2D tDen, tRaw; uniform float uMix; uniform vec2 uSize;
+    vec3 bil(sampler2D t, vec2 uv){                         // manual bilinear: float textures are not filterable everywhere
+      vec2 f = uv * uSize - 0.5; ivec2 i = ivec2(floor(f)); vec2 w = fract(f); ivec2 mx = ivec2(uSize) - 1;
+      vec3 a = texelFetch(t, clamp(i, ivec2(0), mx), 0).rgb, b = texelFetch(t, clamp(i + ivec2(1, 0), ivec2(0), mx), 0).rgb;
+      vec3 c = texelFetch(t, clamp(i + ivec2(0, 1), ivec2(0), mx), 0).rgb, d = texelFetch(t, clamp(i + ivec2(1, 1), ivec2(0), mx), 0).rgb;
+      return mix(mix(a, b, w.x), mix(c, d, w.x), w.y);
+    }
+    void main(){
+      gl_FragColor = vec4(mix(bil(tRaw, vUv), bil(tDen, vUv), uMix), 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+  depthTest: false, depthWrite: false,
+});
+const dnRT = () => new THREE.WebGLRenderTarget(dn.w, dn.h, { type: THREE.FloatType, format: THREE.RGBAFormat, minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true });
+function dnGBuffer() {                                       // view-space normal + view depth of the current camera, same size as the path-traced image (alpha 0 = background)
+  const hidden = [];
+  scene.traverse(o => { if ((o.isLine || o.isPoints) && o.visible) { o.visible = false; hidden.push(o); } });
+  const bg = scene.background, env = scene.environment, sh = renderer.shadowMap.enabled, ca = renderer.getClearAlpha(), cc = renderer.getClearColor(new THREE.Color());
+  scene.overrideMaterial = dnGMat; scene.background = null; scene.environment = null; renderer.shadowMap.enabled = false;
+  renderer.setRenderTarget(dn.g); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, camera); renderer.setRenderTarget(null);
+  scene.overrideMaterial = null; scene.background = bg; scene.environment = env; renderer.shadowMap.enabled = sh; renderer.setClearColor(cc, ca);
+  for (const o of hidden) o.visible = true;
+  dn.dirty = false;
+}
+function dnRender(tex, samples, w, h, raw) {                      // filter `tex` (the accumulated image) and draw it on the canvas; false = fall back to the plain image
+  if (w !== dn.w || h !== dn.h || !dn.g) { for (const k of ['g', 'a', 'b']) dn[k]?.dispose(); dn.w = w; dn.h = h; dn.g = dnRT(); dn.a = dnRT(); dn.b = dnRT(); dn.dirty = true; }
+  let src = tex;
+  if (!raw) {
+  if (dn.dirty) dnGBuffer();
+  const iters = samples < 8 ? 5 : samples < 32 ? 4 : samples < 128 ? 3 : 2;
+  const phi0 = dn.phiK * (0.6 / Math.sqrt(samples) + 0.03);
+  dnQuad.material = dnPassMat; dnPassMat.uniforms.tG.value = dn.g.texture; dnPassMat.uniforms.uP.value.set(camera.projectionMatrix.elements[0], camera.projectionMatrix.elements[5]);
+  for (let k = 0; k < iters; k++) {
+    const dst = k % 2 ? dn.b : dn.a, u = dnPassMat.uniforms;
+    u.tColor.value = src; u.uStep.value = 1 << k; u.uPhi.value = phi0 * Math.pow(0.6, k); u.uFirst.value = k === 0 ? 1 : 0;
+    renderer.setRenderTarget(dst); renderer.render(dnQuadScene, dnCam); src = dst.texture;
+  }
+  }
+  dnQuad.material = dnOutMat; const o = dnOutMat.uniforms;
+  o.tDen.value = src; o.tRaw.value = tex; o.uSize.value.set(w, h); o.uMix.value = raw ? 0 : Math.max(0.25, 1 - samples / 512);
+  renderer.setRenderTarget(null); renderer.render(dnQuadScene, dnCam);
+}
+const RT_BUDGET = (+new URLSearchParams(location.search).get('rpx') || 0.8) * 1e6;   // path-traced pixels per sample (?rpx=<megapixels>): full screen on a Retina display is 10+ MP, which is why it crawled
+function rtScale() { return Math.min(1, Math.sqrt(RT_BUDGET / (view.clientWidth * view.clientHeight * devicePixelRatio ** 2))); }
 function rtFrame() {                                    // one animation frame in path-tracing mode; false = not ready, fall back to raster
   if (!rt.on || !rt.pt || rt.busy) return false;
   camera.updateMatrixWorld();
   const key = [...camera.position.toArray(), ...camera.quaternion.toArray(), camera.fov, view.clientWidth].map(v => +v.toFixed(3)).join(',');   // rounded: OrbitControls damping jitters at 1e-7 every frame, which would reset the accumulation forever
-  if (key !== rt.last) { rt.last = key; rt.pt.updateCamera(); }
+  rt.pt.renderScale = rtScale();                          // follows the window size (setter only resets the accumulation when the value changes)
+  if (key !== rt.last) { rt.last = key; rt.pt.updateCamera(); dn.dirty = true; }
   rt.pt.renderSample();
+  const t = rt.pt.target;
+  if (rt.pt.samples < 1) renderer.render(scene, camera);          // raster until the first sample is in
+  else if (dn.on) dnRender(t.texture, rt.pt.samples, t.width, t.height);
+  else dnRender(t.texture, rt.pt.samples, t.width, t.height, true);
   if ((rt.tick = (rt.tick || 0) + 1) % 15 === 0) rtBtn.textContent = 'Render · ' + Math.floor(rt.pt.samples);
   return true;
 }

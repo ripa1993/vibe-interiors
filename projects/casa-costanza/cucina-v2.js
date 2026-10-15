@@ -8,7 +8,7 @@
 //   verso sud (y n-197..n-72) senza toccare il calorifero sul lato soggiorno. Due sgabelli sul lato soggiorno, una sospensione.
 // Pensili alti (145..250, profondi 35) solo dove non c'e' la finestra. Passaggio libero tra la linea ovest e la penisola: ~93 cm.
 // Misure in cm, stime di progetto. `n` e' la y del muro nord interno della COT.
-module.exports = function cucinaV2({ box, tube, rbox, slab, group, n }) {
+module.exports = function cucinaV2({ box, tube, rbox, slab, group, n, light }) {
   const SG = [124, 146, 128, 255];       // verde salvia (ante dei bassi)
   const WH = [236, 233, 226, 255];       // laccato bianco (pensili)
   const QZ = [214, 210, 202, 255];       // piano in quarzo chiaro
@@ -146,6 +146,7 @@ module.exports = function cucinaV2({ box, tube, rbox, slab, group, n }) {
     tube(P + 'Sospensione_Cavo', BLK, [[-3, n - 135, 330], [-3, n - 135, 205]], [0.35, 0.35], 6);
     tube(P + 'Sospensione_Rosone', BLK, [[-3, n - 135, 327], [-3, n - 135, 330]], [3.5, 3.5], 12);
     rbox(P + 'Sospensione_Paralume', [250, 232, 185, 200], [-17, n - 149, 175, 11, n - 121, 205], 14, 13.5, 13.5);
+    light({ p: [-3, n - 135, 173], a: 72, pen: 0.7, c: [255, 214, 160], i: 150, sh: 1, g: 'cucina-v2' });   // luce sotto il paralume (il paralume stesso si accende in house.js)
     // due tovagliette all'americana (40 x 26) davanti agli sgabelli, con piatto, tazza e posate
     for (const [k, y, mug] of [[0, n - 166, [232, 232, 236, 255]], [1, n - 104, [96, 146, 190, 255]]]) {
       rbox(P + 'Tovaglietta_' + k, k === 0 ? [214, 180, 130, 255] : [150, 172, 150, 255], [-12, y - 20, 95, 14, y + 20, 95.5], 1, 0.2);
