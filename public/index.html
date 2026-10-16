@@ -82,7 +82,7 @@
   <span id="nightctl"><button id="nightbtn" title="Modalità notte: accende le luci (N)">Notte</button></span>
   <span id="fpctl"><button id="fpbtn" title="Prima persona: cammina nella casa (F)">Prima persona</button></span>
   <span id="zoom"><button id="zin" title="Zoom in (+)">+</button><button id="zout" title="Zoom out (−)">−</button></span>
-  <span id="dimctl"><button id="dims" title="Show overall dimensions (M)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="gbtn" title="Show / hide groups of objects (G)">Gruppi</button><button id="removed" title="Hide / show items whose name contains &quot;Rimosso&quot; (R)">Rimossi</button></span></div>
+  <span id="dimctl"><button id="dims" title="Show overall dimensions (M)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="seldims" class="on" title="Show / hide the dimensions on click and the hover tooltip (K)">Misura clic</button><button id="snap" title="Esporta l'immagine corrente come PNG, senza pulsanti ed etichette (P)">PNG</button><button id="gbtn" title="Show / hide groups of objects (G)">Gruppi</button><button id="removed" title="Hide / show items whose name contains &quot;Rimosso&quot; (R)">Rimossi</button></span></div>
 <div id="groups"></div>
 <div id="labels"></div>
 <div id="tip"></div>
@@ -774,7 +774,8 @@ PRESETS.forEach(([name, fn], i) => {
 // ---- dimensions: overall size, hover tooltip, click an object to dimension it ----
 const IN = 2.54;                                         // scene units are inches
 const UNITS = ['cm', 'in', 'm'];
-let unit = 0, showDims = false, selected = null;         // selected = mesh name
+let unit = 0, showDims = false, selected = null, selDims = true;   // selDims: clicking an object dimensions it
+try { selDims = localStorage.getItem('selDims') !== '0'; } catch (e) {}         // selected = mesh name
 const fmt = inches => unit === 0 ? (inches * IN).toFixed(1) + ' cm'
                    : unit === 1 ? inches.toFixed(1) + '″'
                    : (inches * IN / 100).toFixed(2) + ' m';
@@ -822,6 +823,7 @@ function refreshDims() {
   else clearDims();
   for (const o of model.children) if (o.isMesh) for (const m of [].concat(o.material)) m.emissive?.setHex(o === sel ? 0x5a2a00 : 0x000000);
   document.getElementById('dims').classList.toggle('on', showDims);
+  document.getElementById('seldims').classList.toggle('on', selDims);
   document.getElementById('unit').textContent = UNITS[unit];
 }
 // ---- groups panel: checkboxes per group, grouped by category; groups sharing a "variant" are mutually exclusive ----
@@ -901,6 +903,11 @@ document.getElementById('removed').onclick = () => {
   document.getElementById('removed').classList.toggle('on', showRemoved);
   if (current) { build(current); refreshDims(); }              // niente da ricostruire finché la scena non è caricata
 };
+document.getElementById('seldims').onclick = () => {
+  selDims = !selDims; selected = null; tipEl.style.display = 'none';
+  try { localStorage.setItem('selDims', selDims ? '1' : '0'); } catch (e) {}
+  refreshDims();
+};
 document.getElementById('unit').onclick = () => { unit = (unit + 1) % UNITS.length; refreshDims(); };
 
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
@@ -911,7 +918,7 @@ function pick(ev) {
   return ray.intersectObjects(model.children.filter(o => o.isMesh), false)[0]?.object || null;
 }
 renderer.domElement.addEventListener('pointermove', ev => {
-  const hit = ev.buttons ? null : pick(ev);
+  const hit = ev.buttons || !selDims ? null : pick(ev);
   if (!hit) { tipEl.style.display = 'none'; return; }
   const sz = new THREE.Box3().setFromObject(hit).getSize(new THREE.Vector3());
   const parts = hit.name.split('/').filter(Boolean);
@@ -923,6 +930,7 @@ let downAt = null;
 renderer.domElement.addEventListener('pointerdown', ev => downAt = [ev.clientX, ev.clientY]);
 renderer.domElement.addEventListener('pointerup', ev => {                 // a click, not a drag
   if (!downAt || Math.hypot(ev.clientX - downAt[0], ev.clientY - downAt[1]) > 4) return;
+  if (!selDims) return;
   const hit = pick(ev);
   selected = hit && hit.name !== selected ? hit.name : null;
   refreshDims();
@@ -1072,6 +1080,8 @@ addEventListener('keydown', e => {
   if (e.key === '+' || e.key === '=') return zoom(0.8);
   if (e.key === '-' || e.key === '_') return zoom(1.25);
   if (e.key === 'm' || e.key === 'M') return document.getElementById('dims').click();
+  if (e.key === 'k' || e.key === 'K') return document.getElementById('seldims').click();
+  if (e.key === 'p' || e.key === 'P') return document.getElementById('snap').click();
   if (e.key === 'u' || e.key === 'U') return document.getElementById('unit').click();
   if (e.key === 'r' || e.key === 'R') return document.getElementById('removed').click();
   if (e.key === 'g' || e.key === 'G') return gbtn.click();
@@ -1089,9 +1099,30 @@ if (!window.STATIC_BUILD) {                              // versione statica (Cl
   });
 }
 
+// ---- PNG export: copies the canvas that is on screen (raster, AO or path tracer) right after it was drawn, so no buttons / labels / tooltip are included ----
+let snapReq = false;
+function snapshot() {
+  const raster = !rtw.on && !rt.on;                                   // dimension lines are scene objects: hide them for the raster / AO image (path tracers don't draw them)
+  const gpu = rtw.on && rtw.canvas && rtw.canvas.style.display !== 'none';
+  if (raster) { dimGroup.visible = false; if (ao.on && ao.composer) ao.composer.render(); else renderer.render(scene, camera); }
+  const src = gpu ? rtw.canvas : renderer.domElement;
+  const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  c.getContext('2d').drawImage(src, 0, 0);
+  dimGroup.visible = true;
+  c.toBlob(b => {
+    if (!b) return;
+    const a = document.createElement('a'), d = new Date(), p = n => String(n).padStart(2, '0');
+    a.href = URL.createObjectURL(b);
+    a.download = `skp-watch-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.png`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }, 'image/png');
+}
+document.getElementById('snap').onclick = () => { snapReq = true; };
+
 load();
 renderer.setAnimationLoop(now => { stepMove(now); if (!fp) controls.update();   // in first person OrbitControls would re-aim the camera at its target
    if (!rtFrame()) { if (ao.on && ao.composer) ao.composer.render(); else renderer.render(scene, camera); }
+   if (snapReq) { snapReq = false; snapshot(); }
    placeLabels(); });
 </script>
 </body>
