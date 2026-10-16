@@ -49,6 +49,7 @@ defGroup('porta-camera', 'Camera sud · porta scorrevole Corn (Leroy Merlin)', '
 defGroup('armadio', 'Camera sud · armadio PAX angolare (sud-ovest)', 'Camera sud', 'armadio');
 defGroup('armadio-v2', 'Camera sud · armadio v2: 2 PAX da 100 + ante a specchio + TV 43" + BESTA (parete ovest)', 'Camera sud', 'armadio');   // varianti: una esclude l'altra
 defGroup('armadio-v3', 'Camera sud · armadio v3: cabina armadio dietro un muro davanti al letto (TV sul muro, 2 PAX da 150 con ante scorrevoli + 2 librerie)', 'Camera sud', 'armadio');
+defGroup('armadio-v4', 'Camera sud · armadio v4: cabina armadio chiusa (muro con specchio a sinistra e apertura ad arco a destra, PAX aperti, pouf) + TV con mensole', 'Camera sud', 'armadio');
 defGroup('comodini', 'Camera sud · 2 comodini Halston', 'Camera sud');
 defGroup('letto-v1', 'Camera sud · letto IKEA Gladstad 160x200', 'Camera sud');
 defGroup('camera-nord', 'Camera nord · camera ospiti: libreria nella nicchia, divano letto, cassettiera, tavolino, tappeto', 'Camera nord');
@@ -78,6 +79,7 @@ const tube = (n, c, p, r, seg = 8) =>
 const rbox = (n, c, b, r, top, bot = 0) =>
   items.push({ n, c, rbox: { b: b.map(inch), r: inch(r), top: inch(top), bot: inch(bot) } });
 const quad = (a, b, c, d) => [a, b, c, d].map(p => p.map(inch));
+const mesh = (n, c, qs) => items.push({ n, c, faces: qs.map(q => quad(...q)) });   // item 'faces' da quadrilateri in cm (per archi e forme non assiali)
 // falso stipite in un vano su muro lungo X (spessore y0..y1): due montanti e una traversa di 4 cm, nessuna anta
 // stesso falso stipite per vani su muri lungo Y (spessore x0..x1, apertura y0..y1)
 const stipiteY = (nome, x0, x1, y0, y1, h = 210, w = 4) => {
@@ -410,6 +412,7 @@ require('./comodini.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./armadio.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./armadio-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./armadio-v3.js')({ box, tube, rbox, slab, group, n: yT0, light });
+require('./armadio-v4.js')({ box, tube, rbox, slab, group, n: yT0, light, mesh });
 require('./armadio-ante.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./tv-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./parete-testata.js')({ box, group });
