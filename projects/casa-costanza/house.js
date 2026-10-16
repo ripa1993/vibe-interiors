@@ -48,6 +48,7 @@ defGroup('mensole-testata', 'Camera sud · mensole minimali sulla parete verde',
 defGroup('porta-camera', 'Camera sud · porta scorrevole Corn (Leroy Merlin)', 'Camera sud');
 defGroup('armadio', 'Camera sud · armadio PAX angolare (sud-ovest)', 'Camera sud', 'armadio');
 defGroup('armadio-v2', 'Camera sud · armadio v2: 2 PAX da 100 + ante a specchio + TV 43" + BESTA (parete ovest)', 'Camera sud', 'armadio');   // varianti: una esclude l'altra
+defGroup('armadio-v3', 'Camera sud · armadio v3: cabina armadio dietro un muro davanti al letto (TV sul muro, 2 PAX da 150 con ante scorrevoli + 2 librerie)', 'Camera sud', 'armadio');
 defGroup('comodini', 'Camera sud · 2 comodini Halston', 'Camera sud');
 defGroup('letto-v1', 'Camera sud · letto IKEA Gladstad 160x200', 'Camera sud');
 defGroup('camera-nord', 'Camera nord · camera ospiti: libreria nella nicchia, divano letto, cassettiera, tavolino, tappeto', 'Camera nord');
@@ -408,6 +409,7 @@ require('./letto-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./comodini.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./armadio.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./armadio-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./armadio-v3.js')({ box, tube, rbox, slab, group, n: yT0, light });
 require('./armadio-ante.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./tv-camera.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./parete-testata.js')({ box, group });
