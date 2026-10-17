@@ -96,7 +96,7 @@ async function makeThumbs() {
         const view = projectInfo(PROJECTS, id).thumbView;
         await page.goto(`http://127.0.0.1:${port}/${id}/` + (view ? '?view=' + encodeURIComponent(view) : ''), { waitUntil: 'networkidle' });
         await page.waitForFunction(() => /objects/.test(document.getElementById('status').textContent), null, { timeout: 120000 });
-        await page.addStyleTag({ content: '#bar, #groups, #fphint, #tip, #labels { display: none !important; }' });
+        await page.addStyleTag({ content: '#bar, #gbtn, #groups, #fphint, #tip, #labels { display: none !important; }' });
         await page.waitForTimeout(1500);                                   // first frames + textures
         const out = path.join(OUT, id, 'thumb.jpg');
         await page.screenshot({ path: out, type: 'jpeg', quality: 82 });
