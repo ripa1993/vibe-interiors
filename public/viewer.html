@@ -16,10 +16,23 @@
   #dot { width: 9px; height: 9px; border-radius: 50%; background: #bbb; }
   #dot.live { background: #2ba84a; }
   #dot.flash { background: #f2a900; }
-  #views, #zoom { display: flex; gap: 4px; flex-wrap: wrap; }
-  #zoom { margin-left: 6px; padding-left: 10px; border-left: 1px solid #d5d8de; }
-  #zoom button { width: 28px; font-size: 16px; line-height: 1; padding: 3px 0; }
-  #dimctl { display: flex; gap: 4px; margin-left: 6px; padding-left: 10px; border-left: 1px solid #d5d8de; }
+  #camctl { position: relative; display: inline-block; }
+  #views { display: none; position: absolute; top: calc(100% + 11px); left: -6px; z-index: 6; flex-direction: column; gap: 4px; min-width: 120px;
+           background: rgba(255,255,255,.96); border: 1px solid #d5d8de; border-radius: 8px; padding: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.14); }   /* camera presets: a dropdown under #camBtn, outside the bar, shown while #bar.cam */
+  #views button { text-align: left; }
+  #bar.cam #views { display: flex; }
+  #camBtn { display: inline-flex; align-items: center; padding: 3px 7px; }
+  #camBtn svg { width: 18px; height: 18px; display: block; }
+  #bar.cam #camBtn { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  #actions { display: flex; gap: 4px; align-items: center; }                 /* Render | PNG | Notte | Prima persona, close together */
+  #setctl { position: relative; display: inline-block; margin-left: -4px; }                 /* right next to the camera button */
+  #setBtn { display: inline-flex; align-items: center; padding: 3px 7px; }
+  #setBtn svg { width: 18px; height: 18px; display: block; }
+  #bar.set #setBtn { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  #setmenu { display: none; position: absolute; top: calc(100% + 11px); left: -6px; z-index: 6; flex-direction: column; gap: 4px; min-width: 130px;
+             background: rgba(255,255,255,.96); border: 1px solid #d5d8de; border-radius: 8px; padding: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.14); }   /* settings (Dims, unit, Misura clic): a dropdown under the gear; stays open while toggling, folds on a click elsewhere */
+  #setmenu button { text-align: left; }
+  #bar.set #setmenu { display: flex; }
   button.on { background: #d9480f; border-color: #d9480f; color: #fff; }
   #aobtn.active { background: #4a4f5a; border-color: #4a4f5a; color: #fff; }
   #rtbtn.active, #dnbtn.active { background: #0d6e3a; border-color: #0d6e3a; color: #fff; }
@@ -30,10 +43,10 @@
             background: rgba(30,32,38,.85); color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 12px; }
   body.fp #fphint { display: block; } body.fp #view { cursor: pointer; } body.look #view { cursor: none; }
   #views button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
-  #gbtn { display: none; }
+  #gbtn { display: none; position: fixed; left: 10px; bottom: 10px; z-index: 5; box-shadow: 0 1px 4px rgba(0,0,0,.12); }   /* bottom-left, the panel opens right above it */
   #gbtn.has { display: inline-block; }
   #gbtn.open:not(.on) { border-color: #1f6feb; color: #1f6feb; }       /* panel open, no group on: blue; groups on: orange (button.on) */
-  #groups { position: fixed; left: 10px; bottom: 10px; z-index: 5; display: none; max-height: 62vh; overflow: auto; min-width: 210px;
+  #groups { position: fixed; left: 10px; bottom: 48px; z-index: 5; display: none; max-height: 62vh; overflow: auto; min-width: 210px; max-width: min(380px, calc(100vw - 20px)); box-sizing: border-box;
             background: rgba(255,255,255,.95); border: 1px solid #d5d8de; border-radius: 8px; padding: 8px 10px; }
   #groups.open { display: block; }
   #groups h4 { margin: 8px 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #6a7080; }
@@ -43,7 +56,8 @@
   #groups h4.cat .chev { display: inline-block; width: 10px; transition: transform .12s; font-size: 14px; line-height: 1; }
   #groups h4.cat.open .chev { transform: rotate(90deg); }
   #groups h4.cat .cnt { margin-left: auto; font-weight: 400; letter-spacing: 0; text-transform: none; color: #1f6feb; }
-  #groups label { display: flex; gap: 6px; align-items: center; padding: 2px 0; cursor: pointer; }
+  #groups label { display: flex; gap: 6px; align-items: flex-start; padding: 2px 0; cursor: pointer; line-height: 1.3; }   /* long labels wrap under the text, not under the checkbox */
+  #groups label input { flex: none; margin: 2px 0 0; }
   #groups .acts { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e3e5ea; }
   #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
   .dim { position: absolute; transform: translate(-50%, -50%); background: #fff; color: #b8400c; border: 1px solid #d9480f;
@@ -58,19 +72,26 @@
     #bar { top: max(6px, env(safe-area-inset-top)); left: 6px; right: 6px; flex-wrap: wrap; gap: 6px; padding: 6px; }
     #bar button { min-height: 38px; min-width: 38px; padding: 6px 11px; font-size: 14px; }
     #status { display: none; }
-    #aoctl, #rtctl, #fpctl { display: none; }                  /* AO, Render and first person need a GPU / keyboard: desktop only */
+    #rtctl, #fpctl { display: none; }                           /* Render and first person need a GPU / keyboard: desktop only (AO too, see #setmenu #aobtn below) */
     #home { order: 0; }
     #dot { order: 0; margin: 0 2px; }
     #nightctl { order: 1; }
-    #dimctl { display: contents; }
-    #gbtn { order: 2; }
+    #actions, #setctl, #setmenu { display: contents; }
+    #setctl { margin: 0; padding: 0; border: 0; }
+    #setBtn { display: none; }                                  /* on phones Dims / unit / Misura clic are rows of the Views menu */
+    #setmenu button { text-align: center; }
+    #gbtn { left: 6px; bottom: max(6px, env(safe-area-inset-bottom)); min-height: 38px; padding: 6px 11px; font-size: 14px; }
     #morebtn { display: inline-block; order: 2; margin-left: auto; }
     #bar.open #morebtn { background: #1f6feb; border-color: #1f6feb; color: #fff; }
-    #views, #zoom, #dimctl button:not(#gbtn) { display: none; }
+    #camBtn { display: none; }                                  /* on phones the presets live in the Views menu, as a row inside the bar */
+    #camctl { display: contents; }
+    #views { position: static; flex-direction: row; background: none; border: 0; padding: 0; box-shadow: none; min-width: 0; }
+    #views button { text-align: center; }
+    #views, #setmenu button, #snap { display: none; }
     #bar.open #views { display: flex; order: 3; flex: 1 1 100%; gap: 6px; }
-    #bar.open #zoom { display: flex; order: 4; margin: 0; padding: 0; border: 0; gap: 6px; }
-    #bar.open #dimctl button:not(#gbtn) { display: inline-block; order: 4; }
-    #groups { left: 6px; right: 6px; bottom: max(6px, env(safe-area-inset-bottom)); max-height: 60vh; min-width: 0; }
+    #bar.open #setmenu button, #bar.open #snap { display: inline-block; order: 4; }
+    #bar.open #setmenu #aobtn { display: none; }
+    #groups { left: 6px; right: 6px; bottom: calc(max(6px, env(safe-area-inset-bottom)) + 44px); max-height: 60vh; min-width: 0; max-width: none; }
     #groups label { padding: 7px 0; font-size: 14px; }
     #fphint { max-width: calc(100vw - 24px); bottom: max(12px, env(safe-area-inset-bottom)); }
   }
@@ -78,14 +99,18 @@
 </head>
 <body>
 <div id="view"></div>
-<div id="bar"><a id="home" href="../" title="Elenco dei progetti">← Progetti</a><span id="dot"></span><span id="status">connecting…</span><button id="morebtn" title="Views, zoom, dimensions">Views ▾</button>
-  <span id="views"></span>
-  <span id="aoctl"><button id="aobtn" title="Occlusione ambientale: ombre di contatto negli angoli (O)">AO</button></span>
+<div id="bar"><a id="home" href="../" title="Elenco dei progetti">← Progetti</a><span id="dot"></span><span id="status">connecting…</span><button id="morebtn" title="Views, dimensions">Views ▾</button>
+  <span id="camctl"><button id="camBtn" title="Viste camera (1-9)" aria-label="Viste camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2.2l1.4-2h6.8l1.4 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.6"/></svg></button>
+  <span id="views"></span></span>
+  <span id="setctl"><button id="setBtn" title="Impostazioni: quote, unità, misura clic" aria-label="Impostazioni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button><span id="setmenu"><button id="dims" title="Show overall dimensions (M)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="seldims" class="on" title="Show / hide the dimensions on click and the hover tooltip (K)">Misura clic</button><button id="aobtn" title="Occlusione ambientale: ombre di contatto negli angoli (O)">AO</button></span></span>
+  <span id="actions">
   <span id="rtctl"><button id="rtbtn" title="Render path tracing: luce globale, ombre morbide (T)">Render</button> <button id="dnbtn" class="active" title="Denoiser (filtro a-trous guidato da normali e profondità) sul render">Denoise</button></span>
+  <button id="snap" title="Esporta l'immagine corrente come PNG, senza pulsanti ed etichette (P)">PNG</button>
   <span id="nightctl"><button id="nightbtn" title="Modalità notte: accende le luci (N)">Notte</button></span>
   <span id="fpctl"><button id="fpbtn" title="Prima persona: cammina nella casa (F)">Prima persona</button></span>
-  <span id="zoom"><button id="zin" title="Zoom in (+)">+</button><button id="zout" title="Zoom out (−)">−</button></span>
-  <span id="dimctl"><button id="dims" title="Show overall dimensions (M)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="seldims" class="on" title="Show / hide the dimensions on click and the hover tooltip (K)">Misura clic</button><button id="snap" title="Esporta l'immagine corrente come PNG, senza pulsanti ed etichette (P)">PNG</button><button id="gbtn" title="Show / hide groups of objects (G)">Gruppi</button><button id="removed" title="Hide / show items whose name contains &quot;Rimosso&quot; (R)">Rimossi</button></span></div>
+  </span>
+</div>
+<button id="gbtn" title="Show / hide groups of objects (G)">Gruppi</button>
 <div id="groups"></div>
 <div id="labels"></div>
 <div id="tip"></div>
@@ -335,7 +360,12 @@ function geometryFor(item) {
 const enabledGroups = new Set((new URLSearchParams(location.search).get('g') || '').split(',').filter(Boolean));
 let groupsInit = false;
 let groupDefs = [];                                               // [{ id, label, cat, variant }]
-let showRemoved = false;                                          // items named "...Rimosso..." are hidden by default
+const REMOVED_ID = 'rimossi';
+function normalizeRemoved(data) {                                 // items named "...Rimosso..." (walls to be demolished) with no "g" join the implicit group "Elementi rimossi": off by default, left out of "Accendi tutto"
+  let any = false;
+  for (const it of data.items) if (it.n.includes('Rimosso') && !it.g) { it.g = REMOVED_ID; any = true; }
+  if (any && !(data.groups || []).some(g => g.id === REMOVED_ID)) (data.groups = data.groups || []).push({ id: REMOVED_ID, label: 'Elementi rimossi', cat: 'Demolizioni', skipAll: true });
+}
 let ceilingMesh = null;                                           // white ceiling (scene.json "ceiling": {o, z}), shown only in first person; outside `model` so presets/bounds ignore it
 let colliders = [];                                               // first-person walls/furniture, rebuilt with the meshes
 function addCollider(item) {                                      // only what can block a standing person: z between ~8" and ~62"
@@ -359,7 +389,6 @@ function build(data) {
   }
   emissiveMats.length = 0;
   for (const item of data.items) {
-    if (!showRemoved && item.n.includes('Rimosso')) continue;      // "after the works" state
     const gs = [].concat(item.g || []);
     if (gs.length && !gs.some(id => enabledGroups.has(id))) continue;   // group switched off
     const geo = geometryFor(item);
@@ -400,6 +429,7 @@ async function load() {
   try {
     const res = await fetch('scene.json?t=' + Date.now(), { cache: 'no-store' });
     const data = await res.json();
+    normalizeRemoved(data);
     if (!groupsInit) { groupsInit = true; if (!new URLSearchParams(location.search).has('g')) for (const g of data.groups || []) if (g.on) enabledGroups.add(g.id); }   // default-on groups ("on": true in scene.json) only when the URL has no ?g
     current = data;
     build(data);
@@ -739,6 +769,13 @@ const PRESETS = [
 // ---- the chosen view lives in the URL (?view=Iso or ?cam=ex,ey,ez,tx,ty,tz,fov) so a refresh restores it ----
 const viewsEl = document.getElementById('views');
 const viewButtons = {};
+const barEl = document.getElementById('bar');
+document.getElementById('camBtn').onclick = () => { barEl.classList.remove('set'); barEl.classList.toggle('cam'); };
+document.getElementById('setBtn').onclick = () => { barEl.classList.remove('cam'); barEl.classList.toggle('set'); };
+document.addEventListener('pointerdown', e => {                  // click elsewhere folds the open dropdown
+  if (!e.target.closest('#camBtn, #views')) barEl.classList.remove('cam');
+  if (!e.target.closest('#setBtn, #setmenu')) barEl.classList.remove('set');
+});
 function setParams(changes) {
   const u = new URL(location.href);
   for (const [k, v] of Object.entries(changes)) v == null ? u.searchParams.delete(k) : u.searchParams.set(k, v);
@@ -750,6 +787,7 @@ function runPreset(i) {
   fn();
   setParams({ view: name, cam: null });
   markActive(name);
+  barEl.classList.remove('cam');                          // choosing a view folds the list again
 }
 function saveCam() {                                     // free orbit / zoom -> store the exact camera
   const f = v => +v.toFixed(2), p = camera.position, t = controls.target;
@@ -833,7 +871,7 @@ function refreshDims() {
 const groupsEl = document.getElementById('groups'), gbtn = document.getElementById('gbtn');
 function computeGroupDefs(data) {
   const defs = new Map();
-  for (const g of data.groups || []) defs.set(g.id, { id: g.id, label: g.label || g.id, cat: g.cat || 'Altro', variant: g.variant || null });
+  for (const g of data.groups || []) defs.set(g.id, { id: g.id, label: g.label || g.id, cat: g.cat || 'Altro', variant: g.variant || null, skipAll: !!g.skipAll });
   for (const it of data.items) for (const id of [].concat(it.g || [])) if (!defs.has(id)) defs.set(id, { id, label: id, cat: 'Altro', variant: null });
   return [...defs.values()];
 }
@@ -847,7 +885,7 @@ function setAllGroups(on) {
   enabledGroups.clear();
   if (on) {
     const seen = new Set();                                  // "all on" picks the first group of every variant set
-    for (const d of groupDefs) { if (d.variant) { if (seen.has(d.variant)) continue; seen.add(d.variant); } enabledGroups.add(d.id); }
+    for (const d of groupDefs) { if (d.skipAll) continue; if (d.variant) { if (seen.has(d.variant)) continue; seen.add(d.variant); } enabledGroups.add(d.id); }
   }
   groupsChanged();
 }
@@ -901,11 +939,6 @@ const _load = load;
 load = async function () { await _load(); renderGroups(current); refreshDims(); };
 
 document.getElementById('dims').onclick = () => { showDims = !showDims; selected = null; refreshDims(); };
-document.getElementById('removed').onclick = () => {
-  showRemoved = !showRemoved; selected = null;
-  document.getElementById('removed').classList.toggle('on', showRemoved);
-  if (current) { build(current); refreshDims(); }              // niente da ricostruire finché la scena non è caricata
-};
 document.getElementById('seldims').onclick = () => {
   selDims = !selDims; selected = null; tipEl.style.display = 'none';
   try { localStorage.setItem('selDims', selDims ? '1' : '0'); } catch (e) {}
@@ -958,8 +991,6 @@ function zoom(factor) {                                  // dolly toward / away 
   controls.update();
   saveCam();
 }
-document.getElementById('zin').onclick = () => zoom(0.8);
-document.getElementById('zout').onclick = () => zoom(1.25);
 
 // ---- first-person walk: WASD / arrows move, Q/E turn, click to look, spawn at scene.json "spawn" ({p:[x,y], yaw: degrees from +X, ccw}) ----
 const EYE = 66, RADIUS = 6, fpbtn = document.getElementById('fpbtn');
@@ -1086,7 +1117,6 @@ addEventListener('keydown', e => {
   if (e.key === 'k' || e.key === 'K') return document.getElementById('seldims').click();
   if (e.key === 'p' || e.key === 'P') return document.getElementById('snap').click();
   if (e.key === 'u' || e.key === 'U') return document.getElementById('unit').click();
-  if (e.key === 'r' || e.key === 'R') return document.getElementById('removed').click();
   if (e.key === 'g' || e.key === 'G') return gbtn.click();
   const i = Number(e.key) - 1;
   if (i >= 0 && i < PRESETS.length && !e.metaKey && !e.ctrlKey) runPreset(i);
