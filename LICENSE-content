@@ -1,0 +1,16 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+Copyright (c) 2026 Simone Ripamonti
+
+The content in `projects/` (scene generators, furniture modules, generated
+`scene.json` files) and `public/textures/` (parquet texture, generated
+procedurally with Claude) is licensed under CC BY 4.0.
+
+You are free to share and adapt it for any purpose, including commercially,
+as long as you give appropriate credit, link to the license and indicate if
+changes were made.
+
+Full legal text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+The source code (server.js, public/index.html, scripts/) is licensed under the
+MIT License, see the LICENSE file.

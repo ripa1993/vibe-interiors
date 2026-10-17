@@ -89,3 +89,9 @@ Gli screenshot automatici usano `playwright-core` con il Chrome installato, in m
 ## Requisiti
 
 Node.js e un browser moderno. L'unica dipendenza è `three`.
+
+## Licenza
+
+- Codice (`server.js`, `public/index.html`, `scripts/`): [MIT](LICENSE).
+- Contenuti (`projects/`, `public/textures/`): [CC BY 4.0](LICENSE-content). La texture del parquet è stata generata proceduralmente con Claude.
+- Esperimento di interior design realizzato con Claude Code. Non affiliato né approvato da IKEA né da altri marchi citati nei commenti e nei nomi dei moduli.
