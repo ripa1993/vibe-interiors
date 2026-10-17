@@ -4,9 +4,9 @@
 // Uso: node scripts/build-static.js [--save-thumbs] [--no-thumbs]
 //   --save-thumbs: scrive anche projects/<id>/thumb.jpg da committare (errore se manca Chrome); --no-thumbs: salta gli screenshot (usa solo projects/<id>/thumb.jpg)
 const fs = require('fs'), path = require('path'), http = require('http');
-const { listProjects, projectInfo, FONTS, fontPath } = require('./projects');
+const { listProjects, projectInfo, sceneHash, thumbStatus, findChrome, FONTS, fontPath } = require('./projects');
 const ROOT = path.join(__dirname, '..');
-const OUT = path.join(ROOT, 'dist');
+const OUT = process.env.SKP_DIST ? path.resolve(process.env.SKP_DIST) : path.join(ROOT, 'dist');   // SKP_DIST: build somewhere else (used by scripts/smoke.js)
 const PROJECTS = path.join(ROOT, 'projects');
 const THREE = path.join(ROOT, 'node_modules/three');
 const SAVE_THUMBS = process.argv.includes('--save-thumbs'), NO_THUMBS = process.argv.includes('--no-thumbs');
@@ -60,16 +60,11 @@ for (const [pkg, files] of [['oidn-web', ['dist/oidn.js']], ['@pmndrs/upscaler',
 }
 
 // intestazioni Cloudflare Pages: niente indicizzazione, niente cache lunga su scene.json
-fs.writeFileSync(path.join(OUT, '_headers'), '/*\n  X-Robots-Tag: noindex, nofollow\n/*/scene.json\n  Cache-Control: no-cache\n/projects.json\n  Cache-Control: no-cache\n');
+fs.writeFileSync(path.join(OUT, '_headers'), '/*\n  X-Robots-Tag: noindex, nofollow\n/*/scene.json\n  Cache-Control: no-cache\n/projects.json\n  Cache-Control: no-cache\n/three/*\n  Cache-Control: public, max-age=86400\n/vendor/*\n  Cache-Control: public, max-age=86400\n/fonts/*\n  Cache-Control: public, max-age=86400\n');
 fs.writeFileSync(path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
 
 // ---------- miniature: screenshot del viewer in Chrome headless, servito da dist/ ----------
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
-function findChrome() {
-  const c = [process.env.CHROME_PATH, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable',
-             '/usr/bin/chromium', '/usr/bin/chromium-browser'];
-  return c.find(f => f && fs.existsSync(f));
-}
 async function makeThumbs() {
   if (NO_THUMBS) return { done: [], why: '--no-thumbs' };
   let chromium;
@@ -113,7 +108,15 @@ async function makeThumbs() {
   if (why) console.warn('miniature non generate:', why);
   if (SAVE_THUMBS) {
     if (done.length !== ids.length) { console.error('--save-thumbs: miniature mancanti, niente da salvare'); process.exit(1); }
-    for (const id of done) fs.copyFileSync(path.join(OUT, id, 'thumb.jpg'), path.join(PROJECTS, id, 'thumb.jpg'));
+    for (const id of done) {
+      fs.copyFileSync(path.join(OUT, id, 'thumb.jpg'), path.join(PROJECTS, id, 'thumb.jpg'));
+      fs.writeFileSync(path.join(PROJECTS, id, 'thumb.json'), JSON.stringify({ scene: sceneHash(PROJECTS, id) }) + '\n');   // lets the build / npm test notice a stale thumbnail
+    }
+  }
+  for (const id of ids) if (!done.includes(id)) {                      // miniatura committata: avvisa se la scena è cambiata dopo
+    const st = thumbStatus(PROJECTS, id);
+    if (st === 'stale') console.warn(`attenzione: projects/${id}/thumb.jpg è vecchia (scene.json è cambiato): esegui npm run thumbs`);
+    else if (st === 'unknown') console.warn(`nota: projects/${id}/thumb.jpg senza thumb.json, non so se è aggiornata: esegui npm run thumbs`);
   }
   // elenco + pagina iniziale (la miniatura c'è se è stata generata o copiata da projects/<id>/thumb.jpg)
   const info = ids.map(id => ({ ...projectInfo(PROJECTS, id), thumb: fs.existsSync(path.join(OUT, id, 'thumb.jpg')) }));

@@ -1,7 +1,7 @@
 // Camera da letto di prova (progetto minimo per validare la funzione multi-progetto): stanza 400 x 350 cm, porta a sud, finestra a est,
 // letto matrimoniale contro il muro nord, due comodini, armadio a 4 ante contro il muro ovest. Misure in cm (inventate), convertite in pollici.
 // Gli helper (box, group, defGroup, camera, write...) vengono da scripts/scene-kit.js, condivisi con casa-costanza.
-// Uso: node projects/camera-test/room.js   (riscrive scene.json)
+// Uso: node projects/camera-test/room.js [file_output]   (default: riscrive scene.json accanto a questo file)
 const path = require('path');
 const kit = require('../../scripts/scene-kit').createScene({ defaultOn: ['letto', 'armadio'] });
 const { box, group, defGroup } = kit;
@@ -58,7 +58,7 @@ group('armadio', () => {
 // tappeto
 box('/Camera/Tappeto', [204, 198, 188, 255], 90, 40, 0, 310, 160, 1.2);
 
-const out = path.join(__dirname, 'scene.json');
+const out = process.argv[2] || path.join(__dirname, 'scene.json');
 kit.write(out, {
   camera: kit.camera([640, -360, 960], [200, 175, 40]),
   spawn: kit.spawn([145, 40], 90),

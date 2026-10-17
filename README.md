@@ -86,6 +86,10 @@ Su Cloudflare Pages, collegando questo repository GitHub (Workers & Pages → Cr
 
 Crea `projects/<nome>/` con un `scene.json` (a mano, da uno script o dall'export dell'MCP di SketchUp): compare da solo nell'elenco su `/` (riavvio non necessario, basta ricaricare la pagina) e si apre su `/<nome>/`. Le texture stanno in `projects/<nome>/textures/` e nella scena si citano con percorso relativo (`textures/x.png`). In `projects/<nome>/project.json` si possono dare `title`, `description` e `thumbView` (preset di camera per la miniatura, es. `"Iso 2"`). Il formato e le regole di esportazione da SketchUp sono descritti in `CLAUDE.md`.
 
+## Test
+
+`npm test` esegue `scripts/smoke.js`: i generatori riproducono i `scene.json` committati, la build statica ha i file attesi, le rotte del server rispondono e, se c'è Chrome, il viewer si apre senza errori (elenco, menu, gruppi, reload per progetto). Le miniature vecchie sono segnalate come avviso: si rigenerano con `npm run thumbs`.
+
 ## Test del viewer da riga di comando
 
 Gli screenshot automatici usano `playwright-core` con il Chrome installato, in modalità headless con GL software. Il metodo è descritto in `CLAUDE.md`, nella sezione "Testing the viewer headlessly". Gli script e le immagini temporanee non vanno nel repo.
