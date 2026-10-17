@@ -52,7 +52,7 @@ Z è l'asse verticale, come in SketchUp. Ogni oggetto ha esattamente una chiave 
 server.js              server di sviluppo: elenco progetti, viewer, eventi di ricaricamento (SSE) per progetto
 public/index.html      elenco dei progetti (card con miniatura)
 public/viewer.html     il viewer (three.js), servito su /<nome>/
-scripts/               build statica (build-static.js) e ricerca dei progetti (projects.js)
+scripts/               build statica (build-static.js), ricerca dei progetti (projects.js), helper dei generatori (scene-kit.js)
 projects/<nome>/       un modello per cartella: scene.json, textures/, thumb.jpg, project.json (opzionale) e, se c'è, il generatore
 CLAUDE.md              note di progetto, trucchi dell'MCP di SketchUp, flusso di lavoro
 ```

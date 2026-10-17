@@ -2,14 +2,12 @@
 // Tutte le misure sono in cm (x = destra, y = su in pianta, z = altezza); l'output è in pollici.
 // Origine: angolo interno in basso a sinistra del soggiorno.
 // Uso: node projects/casa-costanza/house.js [file_output]   (default: scene.json accanto a questo file)
-const fs = require('fs');
 const path = require('path');
 const OUT = process.argv[2] || path.join(__dirname, 'scene.json');
 const SOGG_D = 501;                              // profondità interna del soggiorno (prima 401: probabile errore di misura)
 const DY = SOGG_D - 401;                          // spostamento delle parti ancorate al muro in alto
 const H = 330;                                   // altezza uniforme dei locali
 let SPAWN;
-const inch = v => +(v / 2.54).toFixed(3);
 
 // colori: pareti tutte bianche (C.wall = misurato, C.est = stimato: la distinzione resta nei nomi/commenti); da rimuovere nei lavori in arancio
 const WALL_WHITE = [250, 250, 248, 255];                         // pareti bianche (prima: beige = misurato, azzurro = stimato)
@@ -18,17 +16,13 @@ const C = { wall: WALL_WHITE, est: WALL_WHITE, rem: [226, 160, 130, 255],
             white: [245, 245, 245, 255], gas: [230, 200, 60, 255], water: [80, 130, 210, 255],
             heater: [215, 215, 222, 255] };
 
-const items = [];
 
 // Gruppi attivabili nel viewer (tutti spenti di default). Gli oggetti senza gruppo sono sempre visibili.
 //   defGroup(id, etichetta, categoria, [variante])  -> gruppi con la stessa `variante` sono mutuamente esclusivi (es. cucina v1 / v2)
 //   group(id, () => { ...box()/tube()/slab()... })  -> tutto cio' che disegni dentro prende il gruppo `id`
-const GROUPS = [];
 const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'antibagno-scarpiera', 'antibagno-elvarli', 'ingresso-attaccapanni', 'ingresso-stampe-mensola', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord', 'soggiorno-billy', 'ripostiglio-stagione', 'ripostiglio-pulizia', 'luci', 'bovindo-salottino'];   // accesi al caricamento del viewer
-const defGroup = (id, label, cat, variant) => GROUPS.push(Object.assign({ id, label, cat }, variant ? { variant } : {}, DEFAULT_ON.includes(id) ? { on: true } : {}));
-const lights = [];                                                  // sorgenti per la modalita' notte del viewer (cm -> pollici); vedi luci.js
-const light = d => lights.push(Object.assign({ t: 'spot', g: 'luci' }, d, { p: d.p.map(v => +(v / 2.54).toFixed(3)) }));
-const group = (id, fn) => { const from = items.length; fn(); for (let k = from; k < items.length; k++) items[k].g = id; };
+const kit = require('../../scripts/scene-kit').createScene({ defaultOn: DEFAULT_ON });   // geometry helpers, groups, lights and the scene.json writer, shared with the other projects
+const { items, inch, box, slab, tray, tube, rbox, quad, mesh, defGroup, group, light } = kit;
 defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
 defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
 defGroup('attacchi-wc-piccolo', 'Attacchi WC piccolo', 'Attacchi');
@@ -68,18 +62,6 @@ defGroup('cucina-v4', 'Cucina v4 · come la v3, frigo e trasversale scambiati', 
 defGroup('cucina-v3', 'Cucina v3 · come la v1, senza penisola', 'Cucina', 'cucina');
 defGroup('cucina-v6', 'Cucina v6 · come la v2, con la gamba corta della L della v4 (angolo + trasversale + frigo + giorno)', 'Cucina', 'cucina');
 defGroup('cucina-v2', 'Cucina v2 · linea ovest + penisola stretta', 'Cucina', 'cucina');
-const box = (n, c, x0, y0, z0, x1, y1, z1) =>
-  items.push({ n, c, box: [x0, y0, z0, x1, y1, z1].map(inch) });
-const slab = (n, c, poly, z0, z1, holes = []) =>
-  items.push({ n, c, slab: { o: poly.map(p => p.map(inch)), h: holes.map(h => h.map(p => p.map(inch))), z: [inch(z0), inch(z1)] } });
-const tray = (n, c, poly, zFloor, zTop) =>
-  items.push({ n, c, tray: { o: poly.map(p => p.map(inch)), z: [inch(zFloor), inch(zTop)] } });
-const tube = (n, c, p, r, seg = 8) =>
-  items.push({ n, c, tube: { p: p.map(q => q.map(inch)), r: r.map(inch), n: seg } });
-const rbox = (n, c, b, r, top, bot = 0) =>
-  items.push({ n, c, rbox: { b: b.map(inch), r: inch(r), top: inch(top), bot: inch(bot) } });
-const quad = (a, b, c, d) => [a, b, c, d].map(p => p.map(inch));
-const mesh = (n, c, qs) => items.push({ n, c, faces: qs.map(q => quad(...q)) });   // item 'faces' da quadrilateri in cm (per archi e forme non assiali)
 // falso stipite in un vano su muro lungo X (spessore y0..y1): due montanti e una traversa di 4 cm, nessuna anta
 // stesso falso stipite per vani su muri lungo Y (spessore x0..x1, apertura y0..y1)
 const stipiteY = (nome, x0, x1, y0, y1, h = 210, w = 4) => {
@@ -432,11 +414,5 @@ require('./attaccapanni-ingresso.js')({ box, tube, group });
 require('./ingresso-decor.js')({ box, tube, group });
 
 // ---------- scena ----------
-const scene = {
-  units: 'inches',
-  camera: { eye: [700, -1500, 1200].map(inch), target: [34, 131 + DY / 2, 0].map(inch), up: [0, 0, 1], fov: 35 },
-  items,
-};
-fs.writeFileSync(OUT, '{"units":"inches","camera":' + JSON.stringify(scene.camera) + ',"spawn":' + JSON.stringify(SPAWN) + ',"ceiling":' + JSON.stringify({ o: FLOOR_POLY.map(p => p.map(inch)), z: [inch(H), inch(H + 3)] }) + ',"lights":' + JSON.stringify(lights) + ',"groups":' + JSON.stringify(GROUPS) + ',"items":[\n' +
-  items.map(i => JSON.stringify(i)).join(',\n') + '\n]}\n');
+kit.write(OUT, { camera: kit.camera([700, -1500, 1200], [34, 131 + DY / 2, 0]), spawn: SPAWN, ceiling: kit.ceiling(FLOOR_POLY, H, H + 3) });
 console.log('items:', items.length, '->', OUT);

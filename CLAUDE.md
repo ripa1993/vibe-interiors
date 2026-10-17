@@ -40,7 +40,7 @@ skp-watch/
   server.js          dev server: project list, viewer, one SSE channel per project; watches projects/ and pushes "reload" events
   public/index.html  the project list (cards with thumbnail, fetches projects.json)
   public/viewer.html the viewer (three.js via importmap, served from node_modules/three), served at /<name>/
-  scripts/           build-static.js (dist/ + thumbnails), projects.js (project discovery, shared with server.js)
+  scripts/           build-static.js (dist/ + thumbnails), projects.js (project discovery, shared with server.js), scene-kit.js (helpers for the generator scripts)
   projects/<name>/   one folder per model: scene.json (what the viewer draws), textures/, thumb.jpg (committed thumbnail, optional), project.json (optional: title, description, thumbView) and, when SketchUp is not available, a generator script (see the fallback below)
   package.json, node_modules/three
   server.log         output of the background server (git-ignored)
@@ -67,6 +67,7 @@ open http://localhost:4173
 5. Only call `save_model` when the user asks for a `.skp`.
 
 **Fallback when `mcp__sketchup__*` is not connected** (it can fail silently: ToolSearch finds nothing): write the scene with a parametric Node script (`projects/<name>/house.js`: dimensions in cm in a table, `defGroup(id, label, cat, [variant])` + `group(id, () => {...})` to tag whatever is drawn inside as a switchable group, `box`/`slab`/`tube`/`faces` helpers, converts to inches, writes `scene.json`). Walls with openings = boxes (segments + lintel + sill); only curved lintels (arch) need a hand-made `faces` mesh (quads between the arch polyline and the top edge, plus the intrados). The result exists only in the viewer, not in SketchUp: say so.
+  **The generator helpers live in `scripts/scene-kit.js`** (`createScene({ defaultOn })` returns `items`, `box`, `slab`, `tray`, `tube`, `rbox`, `mesh`/`quad`, `group`, `defGroup`, `light`, `camera`/`spawn`/`ceiling` (cm in, inches out) and `write(out, {camera, spawn, ceiling})`, which writes one item per line and omits absent keys): a new generator starts with `require('../../scripts/scene-kit').createScene(...)` and does not copy them. `projects/camera-test/room.js` is the minimal example, `house.js` the big one. Both outputs were checked byte-for-byte / JSON-equal before and after the extraction (`group()` appends `g` after the geometry key, so key order differs from hand-written items: harmless).
 
 Cost tip: the whole scene goes through Claude's output twice (tool result, then Write). Keep it small: boxes as `box`, curved things as parametric primitives (`tube`, `slab`, `tray`, `rbox`), never as thousands of triangles. Round numbers to 3 decimals.
 
