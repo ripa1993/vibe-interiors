@@ -2,7 +2,7 @@
 
 Anteprima 3D locale, con aggiornamento automatico, per modelli di edifici.
 
-Un piccolo server Node osserva un file `scene.json`; una pagina three.js nel browser ridisegna la scena ogni volta che il file cambia, mantenendo l'inquadratura. Nasce per vedere in tempo reale i modelli costruiti in SketchUp tramite l'MCP di SketchUp, ma funziona con qualunque `scene.json` valido: i modelli possono anche essere generati da script, come quello in `projects/casa-costanza/`.
+Un piccolo server Node osserva i file `projects/<nome>/scene.json`; aprendo un progetto, una pagina three.js nel browser ridisegna la scena ogni volta che il suo file cambia, mantenendo l'inquadratura. Nasce per vedere in tempo reale i modelli costruiti in SketchUp tramite l'MCP di SketchUp, ma funziona con qualunque `scene.json` valido: i modelli possono anche essere generati da script, come quello in `projects/casa-costanza/`.
 
 > Il viewer mostra la geometria esportata, non il file SketchUp. Un modello generato da script esiste solo qui, non in SketchUp.
 
@@ -10,11 +10,11 @@ Un piccolo server Node osserva un file `scene.json`; una pagina three.js nel bro
 
 ```bash
 npm install
-node server.js projects/casa-costanza/scene.json 4173
+node server.js 4173
 open http://localhost:4173
 ```
 
-Il primo argomento è il file della scena, il secondo la porta (default 4173). Per fermare il server: `pkill -f "node server.js"`. Va riavviato solo se si modifica `server.js`; per `public/index.html` basta ricaricare la pagina.
+`/` mostra l'elenco dei progetti (ogni cartella `projects/<nome>/` con un `scene.json`), `/<nome>/` apre il viewer di quel progetto: l'URL si può salvare nei preferiti, con i parametri della vista (`/casa-costanza/?view=Iso+2`). L'argomento è la porta (default 4173). Per fermare il server: `pkill -f "node server.js"`. Va riavviato solo se si modifica `server.js`; per `public/viewer.html` e `public/index.html` basta ricaricare la pagina.
 
 ## Il viewer
 
@@ -49,9 +49,11 @@ Z è l'asse verticale, come in SketchUp. Ogni oggetto ha esattamente una chiave 
 ## Struttura del repo
 
 ```
-server.js              server statico + eventi di ricaricamento (SSE)
-public/index.html      il viewer (three.js)
-projects/<nome>/       un modello per cartella: scene.json e, se c'è, il generatore
+server.js              server di sviluppo: elenco progetti, viewer, eventi di ricaricamento (SSE) per progetto
+public/index.html      elenco dei progetti (card con miniatura)
+public/viewer.html     il viewer (three.js), servito su /<nome>/
+scripts/               build statica (build-static.js) e ricerca dei progetti (projects.js)
+projects/<nome>/       un modello per cartella: scene.json, textures/, thumb.jpg, project.json (opzionale) e, se c'è, il generatore
 CLAUDE.md              note di progetto, trucchi dell'MCP di SketchUp, flusso di lavoro
 ```
 
@@ -69,18 +71,20 @@ Il server e la pagina si aggiornano da soli. Cambiando una costante nella tabell
 
 Convenzioni nei colori del viewer:
 - **bianco**: tutte le pareti (prima beige = misurate, azzurro = stimate; la distinzione resta nei commenti del codice);
-- **pavimento**: parquet a listoni in rovere (texture `public/textures/parquet-rovere.png`);
+- **pavimento**: parquet a listoni in rovere (texture `projects/casa-costanza/textures/parquet-rovere.png`);
 - **arancio**: elementi da rimuovere nei lavori (nomi che terminano con `_Rimosso`, visibili con **Rimossi**).
 
 ## Pubblicazione statica (Cloudflare Pages)
 
-`npm run build` crea `dist/` (ignorata da git): `index.html`, `scene.json`, le texture e i moduli di three.js, con percorsi relativi, `noindex`/`robots.txt` e nessun aggiornamento automatico (basta ricaricare la pagina). Non serve alcun server Node: funziona su qualunque hosting statico, anche in una sottocartella.
+`npm run build` crea `dist/` (ignorata da git): `index.html` (elenco dei progetti), `<nome>/` con viewer, `scene.json`, texture e miniatura di ogni progetto, e i moduli di three.js condivisi, con percorsi relativi, `noindex`/`robots.txt` e nessun aggiornamento automatico (basta ricaricare la pagina). Non serve alcun server Node: funziona su qualunque hosting statico, anche in una sottocartella.
+
+**Miniature.** La build fa uno screenshot di ogni progetto con Chrome headless (`playwright-core`, Chrome da `CHROME_PATH` o dai percorsi standard), con la camera salvata nella scena o con la vista `thumbView` di `project.json`. Se Chrome non c'è (probabile su Cloudflare Pages, non verificato) usa `projects/<nome>/thumb.jpg` se esiste, altrimenti mostra un segnaposto. Per generare e committare le miniature in locale: `npm run thumbs`.
 
 Su Cloudflare Pages, collegando questo repository GitHub (Workers & Pages → Create → Pages → Connect to Git): *Build command* `npm run build`, *Build output directory* `dist`. Ogni `git push` ripubblica con l'ultimo `scene.json` committato (rigenerato con `node projects/casa-costanza/house.js`). Per limitare l'accesso: Settings → General → Enable access policy (Cloudflare Access / Zero Trust).
 
 ## Aggiungere un altro modello
 
-Crea `projects/<nome>/` con un `scene.json` (a mano, da uno script o dall'export dell'MCP di SketchUp) e avvia il server con quel percorso. Il formato e le regole di esportazione da SketchUp sono descritti in `CLAUDE.md`.
+Crea `projects/<nome>/` con un `scene.json` (a mano, da uno script o dall'export dell'MCP di SketchUp): compare da solo nell'elenco su `/` (riavvio non necessario, basta ricaricare la pagina) e si apre su `/<nome>/`. Le texture stanno in `projects/<nome>/textures/` e nella scena si citano con percorso relativo (`textures/x.png`). In `projects/<nome>/project.json` si possono dare `title`, `description` e `thumbView` (preset di camera per la miniatura, es. `"Iso 2"`). Il formato e le regole di esportazione da SketchUp sono descritti in `CLAUDE.md`.
 
 ## Test del viewer da riga di comando
 
@@ -92,6 +96,6 @@ Node.js e un browser moderno. L'unica dipendenza è `three`.
 
 ## Licenza
 
-- Codice (`server.js`, `public/index.html`, `scripts/`): [MIT](LICENSE).
-- Contenuti (`projects/`, `public/textures/`): [CC BY 4.0](LICENSE-content). La texture del parquet è stata generata proceduralmente con Claude.
+- Codice (`server.js`, `public/`, `scripts/`): [MIT](LICENSE).
+- Contenuti (`projects/`, texture comprese): [CC BY 4.0](LICENSE-content). La texture del parquet è stata generata proceduralmente con Claude.
 - Esperimento di interior design realizzato con Claude Code. Non affiliato né approvato da IKEA né da altri marchi citati nei commenti e nei nomi dei moduli.

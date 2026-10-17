@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "node scripts/build-static.js"
+    "build": "node scripts/build-static.js",
+    "thumbs": "node scripts/build-static.js --save-thumbs"
   },
   "keywords": [],
   "author": "Simone Ripamonti",
@@ -19,5 +20,8 @@
     "three-gpu-pathtracer": "^0.0.27",
     "three-mesh-bvh": "^0.9.16",
     "xatlas-web": "^0.1.0"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1"
   }
 }

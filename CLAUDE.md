@@ -1,7 +1,7 @@
 # skp-watch
 
 Local live preview for models built in SketchUp through the SketchUp MCP (`mcp__sketchup__*`).
-A small Node server watches a scene file (`projects/<name>/scene.json`); a three.js page in the browser redraws it whenever the file changes.
+A small Node server watches the scene files (`projects/<name>/scene.json`); the site lists the projects at `/` and a three.js page at `/<name>/` redraws the chosen one whenever its file changes.
 The viewer (`server.js`, `public/`) doesn't depend on a particular model. Each model lives in its own folder under `projects/`; a `scene.json` from a previous session is not ground truth, overwrite it.
 
 ## Keep this file up to date (self-documentation)
@@ -36,9 +36,11 @@ Tell the user in one short line when you add something ("Annotato in CLAUDE.md: 
 ## Layout
 ```
 skp-watch/
-  server.js          static server + SSE; watches the scene file's directory and pushes "reload" events
-  public/index.html  the viewer (three.js via importmap, served from node_modules/three)
-  projects/<name>/   one folder per model: scene.json (what the viewer draws) and, when SketchUp is not available, a generator script (see the fallback below)
+  server.js          dev server: project list, viewer, one SSE channel per project; watches projects/ and pushes "reload" events
+  public/index.html  the project list (cards with thumbnail, fetches projects.json)
+  public/viewer.html the viewer (three.js via importmap, served from node_modules/three), served at /<name>/
+  scripts/           build-static.js (dist/ + thumbnails), projects.js (project discovery, shared with server.js)
+  projects/<name>/   one folder per model: scene.json (what the viewer draws), textures/, thumb.jpg (committed thumbnail, optional), project.json (optional: title, description, thumbView) and, when SketchUp is not available, a generator script (see the fallback below)
   package.json, node_modules/three
   server.log         output of the background server (git-ignored)
 ```
@@ -46,15 +48,15 @@ Current model: `projects/casa-costanza/` (`house.js` generates its `scene.json`)
 
 ### Run / stop
 ```bash
-cd ~/skp-watch && (nohup node server.js projects/casa-costanza/scene.json 4173 > server.log 2>&1 &)   # http://localhost:4173
+cd ~/skp-watch && (nohup node server.js 4173 > server.log 2>&1 &)   # http://localhost:4173  (list)  ·  http://localhost:4173/casa-costanza/  (viewer)
 pgrep -f "node server.js"            # is it running?
 pkill -f "node server.js"            # stop (do this before restarting after editing server.js)
 open http://localhost:4173
 ```
-- Editing `public/index.html` needs only a browser refresh (Cmd+R). Editing `server.js` needs a restart.
-- The server stops when the Mac restarts. It watches the **directory** (editors/writers replace files), debounced 150 ms.
-- Routes: `/` page, `/scene.json`, `/events` (SSE), `/three/*` (three.js), `/favicon.ico` (204).
-- The page uses only RELATIVE URLs (`scene.json`, `events`, `./three/...`, `textures/...`), so the same `public/index.html` also works from a static host under any subpath. `npm run build` (`scripts/build-static.js`) writes `dist/` for Cloudflare Pages (Cloudflare Pages runs `npm run build` on every deploy and publishes `dist/`, so `dist/` is git-ignored and NOT committed; every runtime file the page imports must be copied by the build script, e.g. the path tracer bundles): sets `window.STATIC_BUILD` (no EventSource), copies the scene, textures and the three.js modules it needs, adds `noindex` headers. Keep new asset URLs in scenes relative (`textures/x.png`, not `/textures/x.png`).
+- Editing `public/viewer.html` or `public/index.html` needs only a browser refresh (Cmd+R). Editing `server.js` needs a restart. A new `projects/<name>/scene.json` appears in the list on the next page load (no restart).
+- The server stops when the Mac restarts. It watches `projects/` **recursively** (editors/writers replace files, so never single files), debounced 150 ms per project; only the viewers of the changed project are told to reload.
+- Routes: `/` project list, `/projects.json`, `/<id>` (302 to `/<id>/`: the trailing slash is needed by the relative URLs), `/<id>/` viewer, `/<id>/scene.json`, `/<id>/events` (SSE), `/<id>/textures/*`, `/<id>/thumb.jpg`, `/three/*` and `/vendor/*` (shared, as in `dist/`), `/favicon.ico` (204). `node server.js scene.json 4173` (old form) still starts: the file is ignored with a warning.
+- The viewer lives one level down (`/<id>/`), so it uses RELATIVE URLs: per-project ones (`scene.json`, `events`, `textures/...`) and shared ones one level up (`../three/...`, `../vendor/...`, in the importmap and the OIDN weights path); the list uses `projects.json`, `<id>/`, `<id>/thumb.jpg`. The same files also work from a static host under any subpath. `npm run build` (`scripts/build-static.js`) writes `dist/` (`index.html` = list, `<id>/` = viewer + scene + textures + thumb.jpg per project, shared `three/` and `vendor/`) for Cloudflare Pages (Cloudflare Pages runs `npm run build` on every deploy and publishes `dist/`, so `dist/` is git-ignored and NOT committed; every runtime file the page imports must be copied by the build script, e.g. the path tracer bundles): sets `window.STATIC_BUILD` (no EventSource), copies the scene, textures and the three.js modules it needs, adds `noindex` headers. Keep new asset URLs in scenes relative (`textures/x.png`, not `/textures/x.png`).
 
 ## Workflow for every model change
 1. Change the model with `mcp__sketchup__build_model`.
@@ -88,7 +90,9 @@ Z is up (same as SketchUp). `n` is the group path (the tooltip shows the last tw
 `loft` is emitted by the exporter if a prim has `type: "loft"`, but **the viewer has no loft handler** (use `rbox`, or add one to `geometryFor`).
 Outlines are `EdgesGeometry` with a 20° threshold; materials are `MeshStandardMaterial`, double-sided, alpha < 255 makes them transparent.
 
-## Viewer features (public/index.html)
+## Viewer features (public/viewer.html)
+- **Several projects on one site**: `/` lists every `projects/<id>/` that has a `scene.json` (cards: thumbnail, title, description, object count; the list comes from `projects.json`, built by `scripts/projects.js`), `/<id>/` is the viewer, so a project can be bookmarked (`/<id>/?view=Iso+2&g=...`; all the query params below still apply). The toolbar starts with a `← Progetti` link (`../`). Optional `projects/<id>/project.json`: `{"title", "description", "thumbView": "<preset name>"}`. Textures live in `projects/<id>/textures/` and scenes cite them relatively (`textures/x.png`).
+- **Thumbnails**: `npm run build` screenshots each project (1200x750 JPEG q82, toolbar hidden, camera = the scene's saved one or `thumbView`) with `playwright-core` + Chrome headless (`CHROME_PATH`, else the usual macOS/Linux paths; same swiftshader flags as the test recipe) served from `dist/`, ~10 s for 2 projects. No Chrome or `--no-thumbs` -> it copies the committed `projects/<id>/thumb.jpg` if there is one, else the list shows a letter placeholder. `npm run thumbs` (= `build-static.js --save-thumbs`) also writes `projects/<id>/thumb.jpg` for committing (and the dev server shows it). Unverified: whether the Cloudflare Pages build image can run Chrome; assume not and commit the thumbnails.
 - **Camera presets** (buttons, keys 1-9): Saved (file camera), Iso, Iso 2, Front, Back, Left, Right, Top, Interior (66" eye height from near the min corner, fov 60). They are computed from the bounding box, so they follow the geometry. The active preset is highlighted in blue.
 - **The view survives a refresh through the URL**: a preset click writes `?view=<name>` (e.g. `?view=Iso+2`); any orbit/zoom writes `?cam=ex,ey,ez,tx,ty,tz,fov` (and clears `view`). On first load `?cam` wins, then `?view`, then the camera saved in `scene.json`. Scene reloads (file changes) never touch the camera. `history.replaceState` is used, so no history entries pile up. Open `http://localhost:4173/?view=Top` to start in a given view.
 - **Zoom** `+` / `−` buttons and keys (dolly toward the orbit target; clamped 5…4000 in).
@@ -114,7 +118,7 @@ const b = await chromium.launch({ executablePath: '/Applications/Google Chrome.a
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const p = await b.newPage({ viewport: { width: 1300, height: 820 }, deviceScaleFactor: 2 });   // 2x for detail
 p.on('pageerror', e => console.log('page error:', e.message));
-await p.goto('http://localhost:4173', { waitUntil: 'networkidle' });
+await p.goto('http://localhost:4173/casa-costanza/', { waitUntil: 'networkidle' });
 await p.click('#views button:text-is("Iso 2")');           // presets, #zin / #zout, #dims, #unit are all clickable
 await p.screenshot({ path: 'shot.png', clip: { x:150, y:100, width:1000, height:640 } });   // clip to zoom on an area
 ```
@@ -434,9 +438,9 @@ Note: if the session expired or `clean: true` was used, `session_state["dump_sce
 - Stock images often carry a watermark: **crop it out** and tell the user.
 - Rebuild only the textured leaf (e.g. a door group inside a component definition): erase the old group in the definition, add the new one; every instance updates.
 
-**Viewer side:** the full-resolution tile goes in `public/textures/<name>.png` (served at `/textures/<name>.png`; build the seamless mirrored version with PIL too). In `scene.json` add `"tex": {"url":"/textures/x.png","tile":36,"face":"-y"}` to a **`box`** item: that face gets the texture repeated every `tile` inches, the other faces use `c` as plain colour (set `c` to the edge colour). Boxes (one face) and slabs (top/bottom caps, world x,y) support `tex`. The exporter doesn't emit `tex` yet: after exporting, add it with the node patch below (match on the leaf name), and keep `session_state["tex"][leaf] = {...}` as the record of what was textured.
+**Viewer side:** the full-resolution tile goes in `projects/<project>/textures/<name>.png` (served at `/<project>/textures/<name>.png`; build the seamless mirrored version with PIL too). In `scene.json` add `"tex": {"url":"textures/x.png","tile":36,"face":"-y"}` to a **`box`** item: that face gets the texture repeated every `tile` inches, the other faces use `c` as plain colour (set `c` to the edge colour). Boxes (one face) and slabs (top/bottom caps, world x,y) support `tex`. The exporter doesn't emit `tex` yet: after exporting, add it with the node patch below (match on the leaf name), and keep `session_state["tex"][leaf] = {...}` as the record of what was textured.
 ```js
-for (const i of s.items) if (i.n.endsWith('/Door_Front')) { i.c = [edge r,g,b,255]; i.tex = {url:'/textures/x.png', tile:36, face:'-y'}; }
+for (const i of s.items) if (i.n.endsWith('/Door_Front')) { i.c = [edge r,g,b,255]; i.tex = {url:'textures/x.png', tile:36, face:'-y'}; }
 ```
 Unverified: how the UV/tile scale renders inside SketchUp itself (only the web preview was looked at). Mirror-tiled patterns show a visible symmetry; use a larger crop if that matters.
 

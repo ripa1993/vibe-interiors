@@ -1,10 +1,15 @@
-// Costruisce la versione STATICA del viewer in dist/ (per Cloudflare Pages o qualunque hosting statico): nessun server, nessun aggiornamento automatico.
-// Uso: node scripts/build-static.js [percorso/scene.json]    (default: projects/casa-costanza/scene.json)
-const fs = require('fs'), path = require('path');
+// Costruisce la versione STATICA in dist/ (per Cloudflare Pages o qualunque hosting statico): nessun server, nessun aggiornamento automatico.
+// dist/index.html = elenco progetti, dist/<id>/ = viewer + scene.json + textures + thumb.jpg di ogni projects/<id>/, dist/three e dist/vendor condivisi.
+// Le miniature sono screenshot fatti con Chrome headless (playwright-core). Senza Chrome (es. Cloudflare Pages) si usa projects/<id>/thumb.jpg se esiste.
+// Uso: node scripts/build-static.js [--save-thumbs] [--no-thumbs]
+//   --save-thumbs: scrive anche projects/<id>/thumb.jpg da committare (errore se manca Chrome); --no-thumbs: salta gli screenshot (usa solo projects/<id>/thumb.jpg)
+const fs = require('fs'), path = require('path'), http = require('http');
+const { listProjects, projectInfo } = require('./projects');
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'dist');
-const SCENE = path.resolve(process.argv[2] || path.join(ROOT, 'projects/casa-costanza/scene.json'));
+const PROJECTS = path.join(ROOT, 'projects');
 const THREE = path.join(ROOT, 'node_modules/three');
+const SAVE_THUMBS = process.argv.includes('--save-thumbs'), NO_THUMBS = process.argv.includes('--no-thumbs');
 
 const copyDir = (from, to, filter = () => true) => {
   fs.mkdirSync(to, { recursive: true });
@@ -14,16 +19,26 @@ const copyDir = (from, to, filter = () => true) => {
     else if (filter(a)) fs.copyFileSync(a, b);
   }
 };
+const NOINDEX = '<meta name="robots" content="noindex, nofollow">\n';
 
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 
-// pagina: marca la build statica e vieta l'indicizzazione dei motori di ricerca
-let html = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
-html = html.replace('<title>', '<meta name="robots" content="noindex, nofollow">\n<script>window.STATIC_BUILD = true;</script>\n<title>');
-fs.writeFileSync(path.join(OUT, 'index.html'), html);
-fs.copyFileSync(SCENE, path.join(OUT, 'scene.json'));
-if (fs.existsSync(path.join(ROOT, 'public/textures'))) copyDir(path.join(ROOT, 'public/textures'), path.join(OUT, 'textures'));
+// elenco dei progetti
+const ids = listProjects(PROJECTS);
+if (!ids.length) { console.error('nessun progetto in projects/ (serve projects/<id>/scene.json)'); process.exit(1); }
+
+// viewer di ogni progetto: marca la build statica e vieta l'indicizzazione dei motori di ricerca
+const viewer = fs.readFileSync(path.join(ROOT, 'public/viewer.html'), 'utf8')
+  .replace('<title>', NOINDEX + '<script>window.STATIC_BUILD = true;</script>\n<title>');
+for (const id of ids) {
+  const from = path.join(PROJECTS, id), to = path.join(OUT, id);
+  fs.mkdirSync(to, { recursive: true });
+  fs.writeFileSync(path.join(to, 'index.html'), viewer);
+  fs.copyFileSync(path.join(from, 'scene.json'), path.join(to, 'scene.json'));
+  if (fs.existsSync(path.join(from, 'textures'))) copyDir(path.join(from, 'textures'), path.join(to, 'textures'));
+  if (fs.existsSync(path.join(from, 'thumb.jpg'))) fs.copyFileSync(path.join(from, 'thumb.jpg'), path.join(to, 'thumb.jpg'));   // fallback se non si può fare lo screenshot
+}
 
 // three.js servito dallo stesso sito (stessi percorsi relativi di server.js): serve solo build/ (moduli ES) e le utility OrbitControls
 copyDir(path.join(THREE, 'build'), path.join(OUT, 'three/build'), f => /three\.(module|core|webgpu|tsl)\.js$/.test(f));   // webgpu + tsl: WebGPU path tracer
@@ -41,6 +56,64 @@ for (const [pkg, files] of [['oidn-web', ['dist/oidn.js']], ['@pmndrs/upscaler',
 }
 
 // intestazioni Cloudflare Pages: niente indicizzazione, niente cache lunga su scene.json
-fs.writeFileSync(path.join(OUT, '_headers'), '/*\n  X-Robots-Tag: noindex, nofollow\n/scene.json\n  Cache-Control: no-cache\n');
+fs.writeFileSync(path.join(OUT, '_headers'), '/*\n  X-Robots-Tag: noindex, nofollow\n/*/scene.json\n  Cache-Control: no-cache\n/projects.json\n  Cache-Control: no-cache\n');
 fs.writeFileSync(path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
-console.log('dist/ pronta:', fs.readdirSync(OUT).join(', '), '| scena:', path.relative(ROOT, SCENE), (fs.statSync(SCENE).size / 1e6).toFixed(2) + ' MB');
+
+// ---------- miniature: screenshot del viewer in Chrome headless, servito da dist/ ----------
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg' };
+function findChrome() {
+  const c = [process.env.CHROME_PATH, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable',
+             '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+  return c.find(f => f && fs.existsSync(f));
+}
+async function makeThumbs() {
+  if (NO_THUMBS) return { done: [], why: '--no-thumbs' };
+  let chromium;
+  try { ({ chromium } = require('playwright-core')); } catch { return { done: [], why: 'playwright-core non installato' }; }
+  const exe = findChrome();
+  if (!exe) return { done: [], why: 'Chrome non trovato (imposta CHROME_PATH)' };
+  const srv = http.createServer((req, res) => {
+    const u = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    let f = path.normalize(path.join(OUT, u));
+    if (!f.startsWith(OUT)) { res.writeHead(403); return res.end(); }
+    if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
+    fs.readFile(f, (err, data) => {
+      if (err) { res.writeHead(404); return res.end(); }
+      res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' }); res.end(data);
+    });
+  });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  const port = srv.address().port, done = [];
+  const browser = await chromium.launch({ executablePath: exe, headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  try {
+    for (const id of ids) {
+      const page = await browser.newPage({ viewport: { width: 1200, height: 750 }, deviceScaleFactor: 1 });
+      try {
+        const view = projectInfo(PROJECTS, id).thumbView;
+        await page.goto(`http://127.0.0.1:${port}/${id}/` + (view ? '?view=' + encodeURIComponent(view) : ''), { waitUntil: 'networkidle' });
+        await page.waitForFunction(() => /objects/.test(document.getElementById('status').textContent), null, { timeout: 120000 });
+        await page.addStyleTag({ content: '#bar, #groups, #fphint, #tip, #labels { display: none !important; }' });
+        await page.waitForTimeout(1500);                                   // first frames + textures
+        const out = path.join(OUT, id, 'thumb.jpg');
+        await page.screenshot({ path: out, type: 'jpeg', quality: 82 });
+        done.push(id);
+      } catch (e) { console.warn(`miniatura di ${id} non generata:`, e.message.split('\n')[0]); }
+      await page.close();
+    }
+  } finally { await browser.close(); srv.close(); }
+  return { done };
+}
+
+(async () => {
+  const { done, why } = await makeThumbs();
+  if (why) console.warn('miniature non generate:', why);
+  if (SAVE_THUMBS) {
+    if (done.length !== ids.length) { console.error('--save-thumbs: miniature mancanti, niente da salvare'); process.exit(1); }
+    for (const id of done) fs.copyFileSync(path.join(OUT, id, 'thumb.jpg'), path.join(PROJECTS, id, 'thumb.jpg'));
+  }
+  // elenco + pagina iniziale (la miniatura c'è se è stata generata o copiata da projects/<id>/thumb.jpg)
+  const info = ids.map(id => ({ ...projectInfo(PROJECTS, id), thumb: fs.existsSync(path.join(OUT, id, 'thumb.jpg')) }));
+  fs.writeFileSync(path.join(OUT, 'projects.json'), JSON.stringify(info));
+  fs.writeFileSync(path.join(OUT, 'index.html'), fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8').replace('<title>', NOINDEX + '<title>'));
+  console.log('dist/ pronta:', fs.readdirSync(OUT).join(', '), '| progetti:', info.map(p => `${p.id} (${p.thumb ? (done.includes(p.id) ? 'miniatura generata' : 'miniatura da projects/') : 'senza miniatura'})`).join(', '));
+})().catch(e => { console.error(e); process.exit(1); });
