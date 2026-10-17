@@ -4,7 +4,7 @@
 // Uso: node scripts/build-static.js [--save-thumbs] [--no-thumbs]
 //   --save-thumbs: scrive anche projects/<id>/thumb.jpg da committare (errore se manca Chrome); --no-thumbs: salta gli screenshot (usa solo projects/<id>/thumb.jpg)
 const fs = require('fs'), path = require('path'), http = require('http');
-const { listProjects, projectInfo } = require('./projects');
+const { listProjects, projectInfo, FONTS, fontPath } = require('./projects');
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'dist');
 const PROJECTS = path.join(ROOT, 'projects');
@@ -40,6 +40,10 @@ for (const id of ids) {
   if (fs.existsSync(path.join(from, 'thumb.jpg'))) fs.copyFileSync(path.join(from, 'thumb.jpg'), path.join(to, 'thumb.jpg'));   // fallback se non si può fare lo screenshot
 }
 
+// font self-hosted (Geist, Geist Mono): /fonts/<nome>.woff2, come in server.js
+fs.mkdirSync(path.join(OUT, 'fonts'), { recursive: true });
+for (const name of Object.keys(FONTS)) fs.copyFileSync(fontPath(ROOT, name), path.join(OUT, 'fonts', name));
+
 // three.js servito dallo stesso sito (stessi percorsi relativi di server.js): serve solo build/ (moduli ES) e le utility OrbitControls
 copyDir(path.join(THREE, 'build'), path.join(OUT, 'three/build'), f => /three\.(module|core|webgpu|tsl)\.js$/.test(f));   // webgpu + tsl: WebGPU path tracer
 copyDir(path.join(THREE, 'examples/jsm/controls'), path.join(OUT, 'three/examples/jsm/controls'));
@@ -60,7 +64,7 @@ fs.writeFileSync(path.join(OUT, '_headers'), '/*\n  X-Robots-Tag: noindex, nofol
 fs.writeFileSync(path.join(OUT, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
 
 // ---------- miniature: screenshot del viewer in Chrome headless, servito da dist/ ----------
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
 function findChrome() {
   const c = [process.env.CHROME_PATH, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable',
              '/usr/bin/chromium', '/usr/bin/chromium-browser'];

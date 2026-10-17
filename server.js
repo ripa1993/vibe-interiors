@@ -3,7 +3,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { ID_RE, listProjects, projectInfo } = require('./scripts/projects');
+const { ID_RE, listProjects, projectInfo, fontPath } = require('./scripts/projects');
 
 const args = process.argv.slice(2);
 if (args[0] && /\.json$/i.test(args[0])) { console.warn(`note: "${args[0]}" is ignored, all projects under projects/ are served`); args.shift(); }
@@ -13,7 +13,7 @@ const PROJECTS = path.join(__dirname, 'projects');
 const THREE = path.join(__dirname, 'node_modules', 'three');
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css',
-               '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml' };
+               '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 const clients = new Map();                                        // project id -> Set of SSE responses
 
 function send(res, code, type, body) {
@@ -34,6 +34,7 @@ const server = http.createServer((req, res) => {
   if (p === '/favicon.ico') return send(res, 204, 'image/x-icon', '');
   if (p === '/') return serveFile(res, path.join(PUBLIC, 'index.html'));
   if (p === '/projects.json') return send(res, 200, 'application/json', JSON.stringify(listProjects(PROJECTS).map(id => projectInfo(PROJECTS, id))));
+  if (p.startsWith('/fonts/')) { const f = fontPath(__dirname, p.slice('/fonts/'.length)); return f ? serveFile(res, f) : send(res, 404, 'text/plain', 'not found'); }
   if (p.startsWith('/vendor/')) {                                  // path tracer (Render button): only the packages it needs
     const f = path.normalize(path.join(__dirname, 'node_modules', p.slice('/vendor/'.length)));
     if (!/node_modules[\\/](three-gpu-pathtracer|three-mesh-bvh|oidn-web|oidn-weights|@pmndrs[\\/]upscaler)[\\/]/.test(f)) return send(res, 403, 'text/plain', 'forbidden');

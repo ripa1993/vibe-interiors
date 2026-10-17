@@ -22,4 +22,8 @@ function projectInfo(dir, id) {
            items, thumb: fs.existsSync(path.join(base, 'thumb.jpg')) };
 }
 
-module.exports = { ID_RE, listProjects, projectInfo };
+// Self-hosted fonts (npm @fontsource-variable, SIL OFL 1.1), served at /fonts/<name> by server.js and copied to dist/fonts/ by the build
+const FONTS = { 'geist.woff2': 'geist/files/geist-latin-wght-normal.woff2', 'geist-mono.woff2': 'geist-mono/files/geist-mono-latin-wght-normal.woff2' };
+const fontPath = (root, name) => FONTS[name] && path.join(root, 'node_modules/@fontsource-variable', FONTS[name]);
+
+module.exports = { ID_RE, listProjects, projectInfo, FONTS, fontPath };

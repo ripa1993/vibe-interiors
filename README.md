@@ -98,4 +98,5 @@ Node.js e un browser moderno. L'unica dipendenza è `three`.
 
 - Codice (`server.js`, `public/`, `scripts/`): [MIT](LICENSE).
 - Contenuti (`projects/`, texture comprese): [CC BY 4.0](LICENSE-content). La texture del parquet è stata generata proceduralmente con Claude.
+- Font Geist e Geist Mono ([SIL OFL 1.1](https://openfontlicense.org)), dal pacchetto npm `@fontsource-variable`; icone [Phosphor](https://phosphoricons.com) (MIT).
 - Esperimento di interior design realizzato con Claude Code. Non affiliato né approvato da IKEA né da altri marchi citati nei commenti e nei nomi dei moduli.

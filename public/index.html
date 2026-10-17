@@ -5,46 +5,66 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SKP Watch · Progetti</title>
 <style>
-  html, body { margin: 0; min-height: 100%; background: #f4f5f7; color: #22252b; font: 14px -apple-system, system-ui, sans-serif; }
-  main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px; }
-  h1 { margin: 0 0 4px; font-size: 24px; }
-  .sub { margin: 0 0 24px; color: #6a7080; }
-  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-  a.card { display: block; color: inherit; text-decoration: none; background: #fff; border: 1px solid #d5d8de; border-radius: 10px; overflow: hidden;
-           transition: box-shadow .12s, transform .12s; }
-  a.card:hover, a.card:focus-visible { box-shadow: 0 4px 14px rgba(0,0,0,.12); transform: translateY(-2px); outline: none; }
-  .thumb { aspect-ratio: 16 / 10; background: linear-gradient(135deg, #e3e6ec, #cdd2dc); display: flex; align-items: center; justify-content: center;
-           font-size: 56px; font-weight: 700; color: #fff; text-transform: uppercase; }
+  @font-face { font-family: 'Geist'; src: url(fonts/geist.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
+  @font-face { font-family: 'Geist Mono'; src: url(fonts/geist-mono.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
+  :root { --bg: #f4f5f7; --surface: #fff; --ink: #1c2330; --muted: #667085; --line: #dfe3ea; --line-soft: #e8ebf0; --line-strong: #c9ced8; --accent: #b5532a;
+          --ease: cubic-bezier(.2,.7,.2,1);
+          --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+  main { max-width: 1120px; margin: 0 auto; padding: clamp(28px, 6vw, 72px) 20px 64px; }
+  h1 { margin: 0 0 6px; font-size: clamp(26px, 4vw, 34px); font-weight: 600; letter-spacing: -.025em; line-height: 1.1; text-wrap: balance; }
+  .sub { margin: 0 0 32px; max-width: 52ch; color: var(--muted); text-wrap: pretty; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px; align-items: start; }
+  a.card { display: block; color: inherit; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+           transition: border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease); }
+  a.card:hover { border-color: var(--line-strong); box-shadow: 0 6px 20px rgba(28,35,48,.08); transform: translateY(-1px); }
+  a.card:active { transform: scale(.995); box-shadow: none; }
+  a.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .thumb { aspect-ratio: 16 / 10; background: var(--line-soft); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--line-soft); }
   .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .info { padding: 10px 12px 12px; }
-  .info h2 { margin: 0 0 2px; font-size: 16px; }
-  .info p { margin: 0; color: #6a7080; font-size: 12px; }
-  .empty { color: #6a7080; }
+  .thumb .none { font: 12px var(--mono); color: var(--muted); letter-spacing: .02em; }
+  .info { padding: 14px 16px 16px; }
+  .info h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .info p { margin: 4px 0 0; color: var(--muted); font-size: 13px; text-wrap: pretty; }
+  .info .meta { margin-top: 10px; font: 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .skel .thumb { animation: pulse 1.4s ease-in-out infinite; }
+  .skel .line { height: 12px; border-radius: 4px; background: var(--line-soft); margin-top: 8px; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  .msg { color: var(--muted); max-width: 60ch; }
+  code { font: 12px var(--mono); background: var(--line-soft); padding: 1px 5px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
 <main>
   <h1>Progetti</h1>
-  <p class="sub">Scegli un modello da aprire.</p>
-  <div id="grid"></div>
+  <p class="sub">Scegli un modello da aprire. L'indirizzo di ogni progetto si può salvare nei preferiti.</p>
+  <div id="grid" aria-live="polite">
+    <div class="card skel" aria-hidden="true"><div class="thumb"></div><div class="info"><div class="line" style="width:55%"></div><div class="line" style="width:35%"></div></div></div>
+  </div>
 </main>
 <script>
 (async () => {
   const grid = document.getElementById('grid');
-  let list = [];
+  let list = null;
   try { list = await (await fetch('projects.json', { cache: 'no-store' })).json(); }
   catch (e) { console.error('projects.json load failed:', e); }
-  if (!list.length) { grid.innerHTML = '<p class="empty">Nessun progetto trovato: crea <code>projects/&lt;nome&gt;/scene.json</code>.</p>'; return; }
+  grid.innerHTML = '';
+  if (!list) { grid.innerHTML = '<p class="msg">Non riesco a caricare l\'elenco dei progetti. Ricarica la pagina.</p>'; return; }
+  if (!list.length) { grid.innerHTML = '<p class="msg">Nessun progetto trovato: aggiungi <code>projects/&lt;nome&gt;/scene.json</code>.</p>'; return; }
+  const none = () => { const n = document.createElement('span'); n.className = 'none'; n.textContent = 'nessuna anteprima'; return n; };
   for (const p of list) {
     const a = document.createElement('a');
     a.className = 'card'; a.href = p.id + '/';                    // relative: works under any subpath
     const t = document.createElement('div'); t.className = 'thumb';
-    if (p.thumb) { const img = new Image(); img.src = p.id + '/thumb.jpg'; img.alt = ''; img.loading = 'lazy'; img.onerror = () => { img.remove(); t.textContent = p.title[0]; }; t.append(img); }
-    else t.textContent = p.title[0];
+    if (p.thumb) { const img = new Image(); img.src = p.id + '/thumb.jpg'; img.alt = 'Anteprima di ' + p.title; img.loading = 'lazy'; img.onerror = () => { img.remove(); t.append(none()); }; t.append(img); }
+    else t.append(none());
     const info = document.createElement('div'); info.className = 'info';
-    const h = document.createElement('h2'); h.textContent = p.title;
-    const d = document.createElement('p'); d.textContent = [p.description, p.items != null ? p.items + ' oggetti' : ''].filter(Boolean).join(' · ');
-    info.append(h, d); a.append(t, info); grid.append(a);
+    const h = document.createElement('h2'); h.textContent = p.title; info.append(h);
+    if (p.description) { const d = document.createElement('p'); d.textContent = p.description; info.append(d); }
+    if (p.items != null) { const m = document.createElement('div'); m.className = 'meta'; m.textContent = p.items.toLocaleString('it-IT') + ' oggetti'; info.append(m); }
+    a.append(t, info); grid.append(a);
   }
 })();
 </script>
