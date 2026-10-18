@@ -63,7 +63,9 @@ open http://localhost:4173
 | Walk through the model | **First person**, or `F` (`Esc` exits) |
 | Top view of the walls with the interior measures of each room | **Plan** (see below) |
 | Switchable groups of objects (furniture, variants, plumbing), all off by default | **Groups** button, bottom left, or `G` |
+| Interface language (English / Italian) | **EN \| IT** at the bottom of the gear menu (and on the project list), or `?lang=it` |
 
+- The interface follows the browser language (Italian if it starts with `it`, English otherwise); the choice is saved in the browser. Only the interface is translated: a project's own text (titles, group and room names) stays as its author wrote it.
 - The view survives a reload through the URL: `?view=Iso+2` or `?cam=ex,ey,ez,tx,ty,tz,fov` (values in inches).
 - **Groups** are switched on from the panel, by category (each category title folds and unfolds with a click); the state is in the URL (`?g=kitchen-v1,bathroom`). Two groups with the same `variant` exclude each other (for example kitchen v1 / v2), the others are independent.
 - Items whose name contains `Rimosso` or `Removed` (walls to be demolished) and that have no group join the implicit group **Removed elements**: off by default (the "after the works" state), drawn when switched on. "All on" leaves it out.
@@ -89,6 +91,7 @@ server.js              dev server: project list, viewer, one reload channel (SSE
 public/index.html      the project list (cards with a thumbnail)
 public/viewer.html     the viewer (three.js), served at /<name>/
 public/plan.mjs        the Plan sheet (walls from above + interior measures), also used by the tests
+public/i18n.mjs        the interface strings in English and Italian (`t('key')`)
 scripts/               static build (build-static.js), project discovery (projects.js), generator helpers (scene-kit.js), smoke test (smoke.js)
 projects/<name>/       one model per folder: scene.json, textures/, thumb.jpg, project.json (optional) and, if there is one, the generator
 CLAUDE.md              project notes for Claude Code: workflow, viewer features, patterns

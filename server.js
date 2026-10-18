@@ -33,6 +33,7 @@ const server = http.createServer((req, res) => {
   const p = url.pathname;
   if (p === '/favicon.ico') return send(res, 204, 'image/x-icon', '');
   if (p === '/') return serveFile(res, path.join(PUBLIC, 'index.html'));
+  if (p === '/i18n.mjs') return serveFile(res, path.join(PUBLIC, 'i18n.mjs'));                          // UI strings en / it, imported by the list, the viewer and plan.mjs
   if (p === '/plan.mjs') return serveFile(res, path.join(PUBLIC, 'plan.mjs'));                          // the plan sheet (viewer button "Plan"), imported as ../plan.mjs
   if (p === '/projects.json') return send(res, 200, 'application/json', JSON.stringify(listProjects(PROJECTS).map(id => projectInfo(PROJECTS, id))));
   if (p.startsWith('/fonts/')) { const f = fontPath(__dirname, p.slice('/fonts/'.length)); return f ? serveFile(res, f) : send(res, 404, 'text/plain', 'not found'); }

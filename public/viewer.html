@@ -37,6 +37,8 @@
   #setmenu { display: none; position: absolute; top: calc(100% + 11px); left: -6px; z-index: 6; flex-direction: column; gap: 4px; min-width: 130px;
              background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px; box-shadow: 0 4px 14px rgba(28,35,48,.12); }   /* settings (Dims, unit, Click to measure): a dropdown under the gear; stays open while toggling, folds on a click elsewhere */
   #setmenu button { text-align: left; }
+  #langrow { display: flex; gap: 4px; padding-top: 4px; margin-top: 2px; border-top: 1px solid var(--line-soft); }
+  #langrow button { flex: 1; text-align: center; }
   #bar.set #setmenu { display: flex; }
   button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   #aobtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -90,6 +92,7 @@
     #setctl { margin: 0; padding: 0; border: 0; }
     #setBtn { display: none; }                                  /* on phones Dims / unit / Click to measure are rows of the Views menu */
     #setmenu button { text-align: center; }
+    #langrow { display: contents; }
     #gbtn { left: 6px; bottom: max(6px, env(safe-area-inset-bottom)); min-height: 38px; padding: 6px 11px; font-size: 14px; }
     #morebtn { display: inline-block; order: 2; margin-left: auto; }
     #bar.open #morebtn { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -109,23 +112,23 @@
 </head>
 <body>
 <div id="view"></div>
-<div id="bar"><a id="home" href="../" title="Project list">← Projects</a><span id="dot"></span><span id="status">connecting…</span><button id="morebtn" title="Views, dimensions">Views ▾</button>
-  <span id="camctl"><button id="camBtn" title="Camera views (1-9)" aria-label="Camera views" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208,56H180.28L166.65,35.56A8,8,0,0,0,160,32H96a8,8,0,0,0-6.65,3.56L75.71,56H48A24,24,0,0,0,24,80V192a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V80A24,24,0,0,0,208,56Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8H80a8,8,0,0,0,6.66-3.56L100.28,48h55.43l13.63,20.44A8,8,0,0,0,176,72h32a8,8,0,0,1,8,8ZM128,88a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,88Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,128,160Z"/></svg></button>
+<div id="bar"><a id="home" data-i18n="v.home" data-i18n-title="v.home.title" href="../" title="Project list">← Projects</a><span id="dot"></span><span id="status" data-i18n="v.connecting">connecting…</span><button id="morebtn" data-i18n-title="v.more.title" title="Views, dimensions">Views ▾</button>
+  <span id="camctl"><button id="camBtn" data-i18n-title="v.cam.title" data-i18n-aria="v.cam.aria" title="Camera views (1-9)" aria-label="Camera views" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208,56H180.28L166.65,35.56A8,8,0,0,0,160,32H96a8,8,0,0,0-6.65,3.56L75.71,56H48A24,24,0,0,0,24,80V192a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V80A24,24,0,0,0,208,56Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8H80a8,8,0,0,0,6.66-3.56L100.28,48h55.43l13.63,20.44A8,8,0,0,0,176,72h32a8,8,0,0,1,8,8ZM128,88a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,88Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,128,160Z"/></svg></button>
   <span id="views"></span></span>
-  <span id="setctl"><button id="setBtn" title="Settings: dimensions, units, click to measure" aria-label="Settings" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z"/></svg></button><span id="setmenu"><button id="dims" title="Show overall dimensions (M)">Dims</button><button id="unit" title="Change units (U)">cm</button><button id="seldims" class="on" title="Show / hide the dimensions on click and the hover tooltip (K)">Click to measure</button><button id="aobtn" title="Occlusione ambientale: ombre di contatto negli angoli (O)">AO</button></span></span>
+  <span id="setctl"><button id="setBtn" data-i18n-title="v.set.title" data-i18n-aria="v.set.aria" title="Settings: dimensions, units, click to measure" aria-label="Settings" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z"/></svg></button><span id="setmenu"><button id="dims" data-i18n="v.dims" data-i18n-title="v.dims.title" title="Show overall dimensions (M)">Dims</button><button id="unit" data-i18n-title="v.unit.title" title="Change units (U)">cm</button><button id="seldims" data-i18n="v.measure" data-i18n-title="v.measure.title" class="on" title="Show / hide the dimensions on click and the hover tooltip (K)">Click to measure</button><button id="aobtn" data-i18n-title="v.ao.title" title="Occlusione ambientale: ombre di contatto negli angoli (O)">AO</button><span id="langrow" role="group" data-i18n-aria="lang.label"><button data-lang="en">EN</button><button data-lang="it">IT</button></span></span></span>
   <span id="actions">
-  <span id="rtctl"><button id="rtbtn" title="Path-traced render: global illumination, soft shadows (T)">Render</button> <button id="dnbtn" class="active" title="Denoiser (a-trous filter guided by normals and depth) on the render">Denoise</button></span>
-  <button id="snap" title="Save the image on screen as a PNG, without buttons or labels (P)">PNG</button>
-  <span id="nightctl"><button id="nightbtn" title="Night mode: turns the lights on (N)">Night</button></span>
-  <span id="fpctl"><button id="fpbtn" title="First person: walk through the model (F)">First person</button></span>
-  <span id="planctl"><button id="planbtn" title="Plan: only the walls seen from above, with the interior measures of the rooms (print, SVG, PNG)">Plan</button></span>
+  <span id="rtctl"><button id="rtbtn" data-i18n-title="v.render.title" title="Path-traced render: global illumination, soft shadows (T)">Render</button> <button id="dnbtn" data-i18n-title="v.denoise.title" class="active" title="Denoiser (a-trous filter guided by normals and depth) on the render">Denoise</button></span>
+  <button id="snap" data-i18n-title="v.png.title" title="Save the image on screen as a PNG, without buttons or labels (P)">PNG</button>
+  <span id="nightctl"><button id="nightbtn" data-i18n="v.night" data-i18n-title="v.night.title" title="Night mode: turns the lights on (N)">Night</button></span>
+  <span id="fpctl"><button id="fpbtn" data-i18n="v.fp" data-i18n-title="v.fp.title" title="First person: walk through the model (F)">First person</button></span>
+  <span id="planctl"><button id="planbtn" data-i18n="v.plan" data-i18n-title="v.plan.title" title="Plan: only the walls seen from above, with the interior measures of the rooms (print, SVG, PNG)">Plan</button></span>
   </span>
 </div>
-<button id="gbtn" title="Show / hide groups of objects (G)">Groups</button>
+<button id="gbtn" data-i18n="v.groups" data-i18n-title="v.groups.title" title="Show / hide groups of objects (G)">Groups</button>
 <div id="groups"></div>
 <div id="labels"></div>
 <div id="tip"></div>
-<div id="fphint">WASD / arrows: move · Q / E: turn · click: mouse look (click again to stop) · Shift: run · F / Esc: exit</div>
+<div id="fphint" data-i18n="v.fphint">WASD / arrows: move · Q / E: turn · click: mouse look (click again to stop) · Shift: run · F / Esc: exit</div>
 <script type="importmap">
 { "imports": { "three": "../three/build/three.module.js", "three/addons/": "../three/examples/jsm/", "three/examples/jsm/": "../three/examples/jsm/",
   "three/webgpu": "../three/build/three.webgpu.js", "three/tsl": "../three/build/three.tsl.js",
@@ -135,7 +138,10 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
+import { t, applyI18n, locale } from '../i18n.mjs';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+applyI18n(); document.title = t('v.title');                       // fills the data-i18n texts / titles in the current language (public/i18n.mjs)
+document.getElementById('morebtn').textContent = t('v.more') + ' ▾';
 
 const view = document.getElementById('view');
 const dot = document.getElementById('dot');
@@ -375,7 +381,7 @@ const REMOVED_ID = 'removed';
 function normalizeRemoved(data) {                                 // items named "...Rimosso..." / "...Removed..." (walls to be demolished) with no "g" join the implicit group "Removed elements": off by default, left out of "All on"
   let any = false;
   for (const it of data.items) if (/Rimosso|Removed/.test(it.n) && !it.g) { it.g = REMOVED_ID; any = true; }
-  if (any && !(data.groups || []).some(g => g.id === REMOVED_ID)) (data.groups = data.groups || []).push({ id: REMOVED_ID, label: 'Removed elements', cat: 'Demolition', skipAll: true });
+  if (any && !(data.groups || []).some(g => g.id === REMOVED_ID)) (data.groups = data.groups || []).push({ id: REMOVED_ID, label: t('g.removed'), cat: t('g.removedCat'), skipAll: true });
 }
 let ceilingMesh = null;                                           // white ceiling (scene.json "ceiling": {o, z}), shown only in first person; outside `model` so presets/bounds ignore it
 let colliders = [];                                               // first-person walls/furniture, rebuilt with the meshes
@@ -445,10 +451,10 @@ async function load() {
     current = data;
     build(data);
     if (firstLoad) { firstLoad = false; applyInitialView(data); if (new URLSearchParams(location.search).has('fp')) enterFP(); if (new URLSearchParams(location.search).has('rt')) rtOn(); if (new URLSearchParams(location.search).has('ao')) aoOn(); }   // later reloads keep your orbit
-    status.textContent = `${data.items.length} objects · ${new Date().toLocaleTimeString()}`;
+    status.textContent = t('v.status.objects', { n: data.items.length, time: new Date().toLocaleTimeString(locale()) });
   } catch (e) {
     console.error('scene load failed:', e);
-    status.textContent = 'waiting for valid scene.json…';
+    status.textContent = t('v.status.waiting');
   }
 }
 
@@ -495,7 +501,7 @@ function applyNight() {
 nightBtn.onclick = () => { night = !night; applyNight(); setParams({ night: night ? 1 : null }); };
 
 // ---- AO button (key O, ?ao=1): screen-space ambient occlusion (GTAO) on the raster view: soft contact shadows in corners, under furniture. The path tracer has it built in.
-document.getElementById('morebtn').onclick = e => { document.getElementById('bar').classList.toggle('open'); e.currentTarget.textContent = document.getElementById('bar').classList.contains('open') ? 'Views ▴' : 'Views ▾'; };   // phones only
+document.getElementById('morebtn').onclick = e => { document.getElementById('bar').classList.toggle('open'); e.currentTarget.textContent = document.getElementById('bar').classList.contains('open') ? t('v.more') + ' ▴' : t('v.more') + ' ▾'; };   // phones only
 const aoBtn = document.getElementById('aobtn');
 const ao = { on: false, composer: null, pass: null };
 window.aoResize = (w, h) => ao.composer?.setSize(w, h);
@@ -823,7 +829,7 @@ function applyInitialView(data) {                        // ?cam wins, then ?vie
 controls.addEventListener('end', saveCam);
 PRESETS.forEach(([name, fn], i) => {
   const b = document.createElement('button');
-  b.textContent = name; b.title = `${name}  (key ${i + 1})`; b.onclick = () => runPreset(i);
+  const lbl = t('view.' + name); b.textContent = lbl; b.title = t('v.view.title', { name: lbl, n: i + 1 }); b.onclick = () => runPreset(i);   // the label is translated, the URL keeps the English name
   viewsEl.appendChild(b);
   viewButtons[name] = b;
 });
@@ -886,8 +892,8 @@ function refreshDims() {
 const groupsEl = document.getElementById('groups'), gbtn = document.getElementById('gbtn');
 function computeGroupDefs(data) {
   const defs = new Map();
-  for (const g of data.groups || []) defs.set(g.id, { id: g.id, label: g.label || g.id, cat: g.cat || 'Other', variant: g.variant || null, skipAll: !!g.skipAll });
-  for (const it of data.items) for (const id of [].concat(it.g || [])) if (!defs.has(id)) defs.set(id, { id, label: id, cat: 'Other', variant: null });
+  for (const g of data.groups || []) defs.set(g.id, { id: g.id, label: g.label || g.id, cat: g.cat || t('g.other'), variant: g.variant || null, skipAll: !!g.skipAll });
+  for (const it of data.items) for (const id of [].concat(it.g || [])) if (!defs.has(id)) defs.set(id, { id, label: id, cat: t('g.other'), variant: null });
   return [...defs.values()];
 }
 function setGroup(id, on) {
@@ -920,7 +926,7 @@ function renderGroups(data) {
   const n = groupDefs.filter(d => enabledGroups.has(d.id)).length;
   gbtn.classList.toggle('has', groupDefs.length > 0);
   gbtn.classList.toggle('on', n > 0);
-  gbtn.textContent = n ? `Groups (${n})` : 'Groups';
+  gbtn.textContent = n ? t('v.groups.count', { n }) : t('v.groups');
   groupsEl.innerHTML = '';
   const cats = [...new Set(groupDefs.map(d => d.cat))];
   for (const cat of cats) {
@@ -929,7 +935,7 @@ function renderGroups(data) {
     const chev = document.createElement('span'); chev.className = 'chev'; chev.textContent = '›';
     h.append(chev, cat);
     const nOn = inCat.filter(d => enabledGroups.has(d.id)).length;
-    if (!isOpen && nOn) { const c = document.createElement('span'); c.className = 'cnt'; c.textContent = nOn + ' on'; h.appendChild(c); }
+    if (!isOpen && nOn) { const c = document.createElement('span'); c.className = 'cnt'; c.textContent = t('g.on', { n: nOn }); h.appendChild(c); }
     h.onclick = () => { collapsedCats.has(cat) ? collapsedCats.delete(cat) : collapsedCats.add(cat); saveCollapsed(); renderGroups(current); };
     groupsEl.appendChild(h);
     if (!isOpen) continue;
@@ -937,12 +943,12 @@ function renderGroups(data) {
       const l = document.createElement('label'), cb = document.createElement('input');
       cb.type = 'checkbox'; cb.checked = enabledGroups.has(d.id);
       cb.onchange = () => setGroup(d.id, cb.checked);
-      l.append(cb, d.label + (d.variant ? '  ·  variant' : ''));
+      l.append(cb, d.label + (d.variant ? '  ·  ' + t('g.variant') : ''));
       groupsEl.appendChild(l);
     }
   }
   const acts = document.createElement('div'); acts.className = 'acts';
-  for (const [txt, on] of [['All on', true], ['All off', false]]) {
+  for (const [txt, on] of [[t('g.allOn'), true], [t('g.allOff'), false]]) {
     const b = document.createElement('button'); b.textContent = txt; b.onclick = () => setAllGroups(on); acts.appendChild(b);
   }
   groupsEl.appendChild(acts);

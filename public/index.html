@@ -32,39 +32,47 @@
   .skel .line { height: 12px; border-radius: 4px; background: var(--line-soft); margin-top: 8px; animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .55; } }
   .msg { color: var(--muted); max-width: 60ch; }
+  .lang { display: flex; gap: 4px; justify-content: flex-end; margin: -24px 0 12px; }
+  .lang button { font: 12px var(--mono); padding: 3px 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 6px; cursor: pointer; transition: background-color .15s var(--ease), border-color .15s var(--ease); }
+  .lang button:hover { background: #f1f3f6; border-color: var(--muted); }
+  .lang button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .lang button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   code { font: 12px var(--mono); background: var(--line-soft); padding: 1px 5px; border-radius: 4px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
 <main>
-  <h1>Projects</h1>
-  <p class="sub">Pick a model to open. The address of each project can be bookmarked.</p>
+  <div class="lang" role="group" data-i18n-aria="lang.label"><button data-lang="en">EN</button><button data-lang="it">IT</button></div>
+  <h1 data-i18n="list.h1">Projects</h1>
+  <p class="sub" data-i18n="list.sub">Pick a model to open. The address of each project can be bookmarked.</p>
   <div id="grid" aria-live="polite">
     <div class="card skel" aria-hidden="true"><div class="thumb"></div><div class="info"><div class="line" style="width:55%"></div><div class="line" style="width:35%"></div></div></div>
   </div>
 </main>
-<script>
+<script type="module">
+import { t, applyI18n, locale } from './i18n.mjs';
+applyI18n(); document.title = t('list.title');
 (async () => {
   const grid = document.getElementById('grid');
   let list = null;
   try { list = await (await fetch('projects.json', { cache: 'no-store' })).json(); }
   catch (e) { console.error('projects.json load failed:', e); }
   grid.innerHTML = '';
-  if (!list) { grid.innerHTML = '<p class="msg">Could not load the project list. Reload the page.</p>'; return; }
-  if (!list.length) { grid.innerHTML = '<p class="msg">No project found: add <code>projects/&lt;name&gt;/scene.json</code>.</p>'; return; }
-  const none = () => { const n = document.createElement('span'); n.className = 'none'; n.textContent = 'no preview'; return n; };
+  if (!list) { grid.innerHTML = `<p class="msg">${t('list.loadError')}</p>`; return; }
+  if (!list.length) { grid.innerHTML = `<p class="msg">${t('list.empty')}</p>`; return; }
+  const none = () => { const n = document.createElement('span'); n.className = 'none'; n.textContent = t('list.noPreview'); return n; };
   for (const p of list) {
     const a = document.createElement('a');
     a.className = 'card'; a.href = p.id + '/';                    // relative: works under any subpath
-    const t = document.createElement('div'); t.className = 'thumb';
-    if (p.thumb) { const img = new Image(); img.src = p.id + '/thumb.jpg'; img.alt = 'Preview of ' + p.title; img.loading = 'lazy'; img.onerror = () => { img.remove(); t.append(none()); }; t.append(img); }
-    else t.append(none());
+    const th = document.createElement('div'); th.className = 'thumb';
+    if (p.thumb) { const img = new Image(); img.src = p.id + '/thumb.jpg'; img.alt = t('list.preview', { title: p.title }); img.loading = 'lazy'; img.onerror = () => { img.remove(); th.append(none()); }; th.append(img); }
+    else th.append(none());
     const info = document.createElement('div'); info.className = 'info';
     const h = document.createElement('h2'); h.textContent = p.title; info.append(h);
     if (p.description) { const d = document.createElement('p'); d.textContent = p.description; info.append(d); }
-    if (p.items != null) { const m = document.createElement('div'); m.className = 'meta'; m.textContent = p.items.toLocaleString('en-GB') + ' objects'; info.append(m); }
-    a.append(t, info); grid.append(a);
+    if (p.items != null) { const m = document.createElement('div'); m.className = 'meta'; m.textContent = t('list.objects', { n: p.items.toLocaleString(locale()) }); info.append(m); }
+    a.append(th, info); grid.append(a);
   }
 })();
 </script>

@@ -92,12 +92,31 @@ function freePort() {
       ok('bootstrap template: generates a closed 450 x 320 cm room named "Room"', !!room && room.name === 'Room' && room.sides.map(x => Math.round(x.len)).sort().join() === '320,450', r.stderr);
     }
 
+    section('i18n (public/i18n.mjs)');
+    {
+      const { DICTS, LANGS } = await import(pathToFileURL(path.join(ROOT, 'public/i18n.mjs')).href);
+      const keys = l => Object.keys(DICTS[l]).sort(), params = x => (x.match(/\{(\w+)\}/g) || []).sort().join();
+      ok(`i18n: ${LANGS.join(' and ')} have exactly the same keys`, LANGS.every(l => keys(l).join() === keys('en').join()), LANGS.map(l => keys('en').filter(k => !(k in DICTS[l])).join()).join(' / '));
+      const bad = keys('en').filter(k => LANGS.some(l => !DICTS[l][k] || params(DICTS[l][k]) !== params(DICTS.en[k])));
+      ok('i18n: no empty string and the same {params} in every language', bad.length === 0, bad.join(', '));
+      const used = new Set(['p.bar.one', 'p.bar.many', 'p.landscape', 'p.portrait', ...['Saved', 'Iso', 'Iso 2', 'Front', 'Back', 'Left', 'Right', 'Top', 'Interior'].map(n => 'view.' + n)]);   // keys built at run time
+      for (const f of ['index.html', 'viewer.html', 'plan.mjs']) {
+        const src = fs.readFileSync(path.join(ROOT, 'public', f), 'utf8');
+        for (const m of src.matchAll(/\bt\('([^']+)'/g)) if (!m[1].endsWith('.')) used.add(m[1]);   // 'view.' + name and 'p.' + orient are covered above
+        for (const m of src.matchAll(/data-i18n(?:-title|-aria|-html)?="([^"]+)"/g)) used.add(m[1]);
+      }
+      const missing = [...used].filter(k => !(k in DICTS.en));
+      ok('i18n: every key used by the UI exists in the dictionary', missing.length === 0, missing.join(', '));
+      const unused = keys('en').filter(k => !used.has(k));
+      if (unused.length) warn('i18n: keys never used: ' + unused.join(', '));
+    }
+
     section('static build');
     const dist = path.join(TMP, 'dist');
     const b = spawnSync(process.execPath, [path.join(__dirname, 'build-static.js'), '--no-thumbs'], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, SKP_DIST: dist } });
     ok('build-static.js --no-thumbs exits 0', b.status === 0, b.stderr.split('\n')[0]);
     const has = f => fs.existsSync(path.join(dist, f));
-    ok('dist has index.html, projects.json, plan.mjs, fonts, three, _headers', ['index.html', 'projects.json', 'plan.mjs', 'fonts/geist.woff2', 'fonts/geist-mono.woff2', 'three/build/three.module.js', '_headers'].every(has));
+    ok('dist has index.html, projects.json, plan.mjs, i18n.mjs, fonts, three, _headers', ['index.html', 'projects.json', 'plan.mjs', 'i18n.mjs', 'fonts/geist.woff2', 'fonts/geist-mono.woff2', 'three/build/three.module.js', '_headers'].every(has));
     for (const id of ids) ok(`dist/${id}/ has index.html, scene.json, textures where used`, has(`${id}/index.html`) && has(`${id}/scene.json`) && (!fs.existsSync(path.join(PROJECTS, id, 'textures')) || has(`${id}/textures`)));
     if (has('projects.json')) ok('dist/projects.json lists every project', JSON.parse(fs.readFileSync(path.join(dist, 'projects.json'), 'utf8')).map(p => p.id).join() === ids.join());
     ok('viewer in dist reaches shared files with ../ and is marked static', /\.\.\/three\//.test(fs.readFileSync(path.join(dist, ids[0], 'index.html'), 'utf8')) && /STATIC_BUILD = true/.test(fs.readFileSync(path.join(dist, ids[0], 'index.html'), 'utf8')));
@@ -116,7 +135,7 @@ function freePort() {
       const sc = await get(`/${id}/scene.json`); ok(`/${id}/scene.json is JSON`, sc.status === 200 && Array.isArray((await sc.json()).items));
     }
     ok('unknown project and path traversal are refused', (await get('/nope/')).status === 404 && [403, 404].includes((await get(`/${ids[0]}/..%2f..%2fserver.js`)).status));
-    ok('/plan.mjs and /<id>/project.json are served', (await get('/plan.mjs')).status === 200 && (await get(`/${ids[0]}/project.json`)).status === (fs.existsSync(path.join(PROJECTS, ids[0], 'project.json')) ? 200 : 404));
+    ok('/plan.mjs, /i18n.mjs and /<id>/project.json are served', (await get('/plan.mjs')).status === 200 && (await get('/i18n.mjs')).status === 200 && (await get(`/${ids[0]}/project.json`)).status === (fs.existsSync(path.join(PROJECTS, ids[0], 'project.json')) ? 200 : 404));
     ok('fonts and shared libs are served', (await get('/fonts/geist.woff2')).status === 200 && (await get('/three/build/three.module.js')).status === 200 && (await get('/vendor/oidn-weights/rt_hdr_alb_nrm_small.tza')).status === 200);
 
     section('browser');
@@ -126,7 +145,7 @@ function freePort() {
     else {
       const browser = await chromium.launch({ executablePath: exe, headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
       const open = async (url, w = 1300, h = 800) => {
-        const p = await browser.newPage({ viewport: { width: w, height: h } });
+        const p = await browser.newPage({ viewport: { width: w, height: h }, locale: 'en-US' });   // the tests read English labels; Italian is checked on its own below
         p.errors = [];
         p.on('pageerror', e => p.errors.push('pageerror: ' + e.message));
         p.on('console', m => m.type() === 'error' && p.errors.push('console: ' + m.text()));
@@ -134,7 +153,7 @@ function freePort() {
         await p.goto(base + url, { waitUntil: 'networkidle' });
         return p;
       };
-      const loaded = p => p.waitForFunction(() => /objects/.test(document.getElementById('status').textContent), null, { timeout: 120000 });
+      const loaded = p => p.waitForFunction(() => /objects|oggetti/.test(document.getElementById('status').textContent), null, { timeout: 120000 });
 
       const home = await open('/');
       await home.waitForSelector('a.card');
@@ -177,6 +196,19 @@ function freePort() {
         // implicit "Removed elements" group
         if (scene.items.some(i => /Rimosso|Removed/.test(i.n) && !i.g)) ok(`${id}: "Removed elements" group exists and is off`, (await p.locator('#groups label', { hasText: 'Removed elements' }).count()) === 1 && !(await p.locator('#groups label', { hasText: 'Removed elements' }).locator('input').isChecked()));
         await p.close();
+      }
+
+      {   // UI language: ?lang=it, the Italian toolbar still fits, the switch in the gear menu saves the choice
+        const hl = await open('/?lang=it'); await hl.waitForSelector('a.card');
+        ok('i18n: ?lang=it shows the project list in Italian', (await hl.textContent('h1')) === 'Progetti' && (await hl.$eval('html', e => e.lang)) === 'it');
+        await hl.close();
+        const it = await open(`/${ids[0]}/?lang=it`); await loaded(it);
+        ok('i18n: ?lang=it shows the toolbar in Italian', (await it.textContent('#fpbtn')) === 'Prima persona' && (await it.textContent('#planbtn')) === 'Pianta' && (await it.$eval('html', e => e.lang)) === 'it' && !it.errors.length, it.errors.join('; '));
+        const right = await it.$eval('#bar', e => e.getBoundingClientRect().right);
+        ok('i18n: the Italian toolbar fits the window', right < 1300 - 8, 'right edge ' + Math.round(right));
+        await it.click('#setBtn'); await it.click('#langrow button[data-lang="en"]'); await loaded(it);
+        ok('i18n: the gear-menu switch changes the language and saves it', (await it.textContent('#fpbtn')) === 'First person' && (await it.evaluate(() => localStorage.getItem('lang'))) === 'en' && !/[?&]lang=/.test(it.url()));
+        await it.close();
       }
 
       if (ids.length >= 2) {                                         // reload events reach only the viewers of the changed project

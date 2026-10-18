@@ -10,6 +10,7 @@
 //  - rooms = closed empty regions of a 1 cm grid cut just under the top of the walls (doors and windows are closed by their lintels there),
 //    traced to a polygon, simplified and snapped to the exact wall coordinates; every side >= MIN_SIDE is dimensioned, plus the net area.
 //  - names come from project.json  "rooms": [{"name": "Bedroom", "at": [x, y]}]  (cm, a point inside the room); unnamed rooms are "Room N".
+import { t, locale } from './i18n.mjs';
 const CELL = 1, SLICE_Z = 100, MIN_AREA = 0.8, MIN_SIDE = 30, IN = 2.54, SNAP = 2.5;
 const REMOVED = 'removed';
 const SCALES = [20, 25, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500];
@@ -165,17 +166,17 @@ export function buildPlan(data, enabled = new Set(), meta = {}) {
       const lo = edges.filter(e => e.a[1] === e.b[1]).sort((p, q) => p.a[1] - q.a[1])[0], le = edges.filter(e => e.a[0] === e.b[0]).sort((p, q) => p.a[0] - q.a[0])[0];
       sides = [lo, le].filter(Boolean);
     }
-    rooms.push({ id: r.id, name: name || `Room ${++n}`, named: !!name, poly, edges, sides, rect, area, label: [cx, cy] });
+    rooms.push({ id: r.id, name: name || t('p.room', { n: ++n }), named: !!name, poly, edges, sides, rect, area, label: [cx, cy] });
   }
   return { walls, rooms, bounds: bboxOf(walls.flatMap(w => w.pts)), sliceZ: SLICE_Z, roomZ };
 }
 
 // ---------------------------------------------------------------- sheet
-const fmt = v => v.toLocaleString('en-GB', { maximumFractionDigits: 1, minimumFractionDigits: 0 });
+const fmt = v => v.toLocaleString(locale(), { maximumFractionDigits: 1, minimumFractionDigits: 0 });
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // Fits the plan on the paper at the smallest standard scale; returns the SVG string and the sheet data
-export function planSvg(plan, { paper = 'a4', title = 'Plan' } = {}) {
+export function planSvg(plan, { paper = 'a4', title = t('p.title') } = {}) {
   const { bounds: b } = plan, PAD = 25, BAND_MM = 12, MARGIN = 10;
   const bw = b.x1 - b.x0 + 2 * PAD, bh = b.y1 - b.y0 + 2 * PAD;
   let best = null;
@@ -212,22 +213,22 @@ export function planSvg(plan, { paper = 'a4', title = 'Plan' } = {}) {
       ? `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${(fsRoom * k).toFixed(1)}" fill="#1c2330" stroke="#fff" stroke-width="${(0.9 * mm * k).toFixed(2)}" paint-order="stroke"><tspan font-weight="600">${esc(r.name)}</tspan><tspan fill="#667085">  ·  ${fmt(Math.round(r.area * 10) / 10)} m²</tspan></text>`
       : `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" fill="#1c2330" stroke="#fff" stroke-width="${(0.9 * mm).toFixed(2)}" paint-order="stroke"><tspan font-size="${(fsRoom * k).toFixed(1)}" font-weight="600">${esc(r.name)}</tspan><tspan x="${lx.toFixed(1)}" dy="${(fsRoom * k * 1.25).toFixed(1)}" font-size="${rfs.toFixed(1)}" fill="#667085">${fmt(Math.round(r.area * 10) / 10)} m²</tspan></text>`;
   }
-  const r1 = bh + band * 0.4, r2 = bh + band * 0.8, date = new Date().toLocaleDateString('en-GB');
+  const r1 = bh + band * 0.4, r2 = bh + band * 0.8, date = new Date().toLocaleDateString(locale());
   svg += `<path d="M0 ${bh.toFixed(1)}H${vbW.toFixed(1)}" stroke="#c9ced8" stroke-width="${sw}"/>`;
   svg += `<text x="${(3 * mm).toFixed(1)}" y="${r1.toFixed(1)}" font-size="${(3.4 * mm).toFixed(1)}" font-weight="600" fill="#1c2330">${esc(title)}</text>`;
-  svg += `<text x="${(vbW - 3 * mm).toFixed(1)}" y="${r1.toFixed(1)}" text-anchor="end" font-size="${(3 * mm).toFixed(1)}" fill="#1c2330">Scale 1:${N}</text>`;
-  svg += `<text x="${(3 * mm).toFixed(1)}" y="${r2.toFixed(1)}" font-size="${(2.5 * mm).toFixed(1)}" fill="#667085">Plan, interior dimensions in cm, cut at ${plan.sliceZ} cm</text>`;
-  svg += `<text x="${(vbW - 3 * mm).toFixed(1)}" y="${r2.toFixed(1)}" text-anchor="end" font-size="${(2.5 * mm).toFixed(1)}" fill="#667085">${paper.toUpperCase()} ${best.orient}  ·  ${date}</text>`;
+  svg += `<text x="${(vbW - 3 * mm).toFixed(1)}" y="${r1.toFixed(1)}" text-anchor="end" font-size="${(3 * mm).toFixed(1)}" fill="#1c2330">${t('p.scale', { n: N })}</text>`;
+  svg += `<text x="${(3 * mm).toFixed(1)}" y="${r2.toFixed(1)}" font-size="${(2.5 * mm).toFixed(1)}" fill="#667085">${t('p.sub', { z: plan.sliceZ })}</text>`;
+  svg += `<text x="${(vbW - 3 * mm).toFixed(1)}" y="${r2.toFixed(1)}" text-anchor="end" font-size="${(2.5 * mm).toFixed(1)}" fill="#667085">${paper.toUpperCase()} ${t('p.' + best.orient)}  ·  ${date}</text>`;
   svg += '</svg>';
   return { svg, scale: N, orient: best.orient, wMm, hMm, paper };
 }
 
 // ---------------------------------------------------------------- overlay (browser only)
-export function openPlan({ data, enabled, meta = {}, title = 'Plan', id = 'project' }) {
+export function openPlan({ data, enabled, meta = {}, title = t('p.title'), id = 'project' }) {
   document.getElementById('plan')?.remove();
   const plan = buildPlan(data, enabled, meta);
   const el = document.createElement('div');
-  el.id = 'plan'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Plan');
+  el.id = 'plan'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', t('p.aria'));
   el.innerHTML = `<style>
     #plan { position: fixed; inset: 0; z-index: 20; background: var(--bg, #f4f5f7); display: flex; flex-direction: column; font: 13px/1.4 var(--sans, system-ui, sans-serif); color: var(--ink, #1c2330); }
     #plan .pbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; background: #fff; border-bottom: 1px solid var(--line, #dfe3ea); }
@@ -241,22 +242,22 @@ export function openPlan({ data, enabled, meta = {}, title = 'Plan', id = 'proje
       #plan .pbar { display: none; } #plan .pbody { padding: 0; display: block; overflow: visible; }
       #plan .sheet { border: 0; box-shadow: none; display: block; } #plan .sheet svg { width: var(--w) !important; height: var(--h) !important; max-width: none; max-height: none; } }
   </style>
-  <div class="pbar"><b>Plan · ${plan.rooms.length} ${plan.rooms.length === 1 ? 'room' : 'rooms'}</b>
-    <label>Paper <select id="plan-paper"><option value="a4">A4</option><option value="a3">A3</option></select></label>
-    <button id="plan-print" title="Opens the browser print dialog (Save as PDF works from there)">Print</button><button id="plan-svg">Download SVG</button><button id="plan-png">Download PNG</button><button id="plan-close" title="Close (Esc)">Close</button></div>
+  <div class="pbar"><b>${t(plan.rooms.length === 1 ? 'p.bar.one' : 'p.bar.many', { n: plan.rooms.length })}</b>
+    <label>${t('p.paper')} <select id="plan-paper"><option value="a4">A4</option><option value="a3">A3</option></select></label>
+    <button id="plan-print" title="${t('p.print.title')}">${t('p.print')}</button><button id="plan-svg">${t('p.svg')}</button><button id="plan-png">${t('p.png')}</button><button id="plan-close" title="${t('p.close.title')}">${t('p.close')}</button></div>
   <div class="pbody"><div class="sheet" id="plan-sheet"></div></div>`;
   document.body.appendChild(el);
   const sheet = el.querySelector('#plan-sheet'), pageStyle = document.createElement('style');
   document.head.appendChild(pageStyle);
   let cur = null;
   const render = () => {
-    if (!plan.bounds) { sheet.innerHTML = '<p class="msg" style="padding:24px">No walls found: it needs <code>box</code> or <code>slab</code> items with no group that cross the 100 cm height.</p>'; return; }
+    if (!plan.bounds) { sheet.innerHTML = `<p class="msg" style="padding:24px">${t('p.none')}</p>`; return; }
     cur = planSvg(plan, { paper: el.querySelector('#plan-paper').value, title });
     sheet.innerHTML = cur.svg;
     const s = sheet.querySelector('svg'); s.style.setProperty('--w', cur.wMm.toFixed(1) + 'mm'); s.style.setProperty('--h', cur.hMm.toFixed(1) + 'mm');
     pageStyle.textContent = `@media print { @page { size: ${cur.paper.toUpperCase()} ${cur.orient}; margin: 10mm; } }`;
   };
-  const download = (blob, ext) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${id}-plan-${cur.paper}.${ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+  const download = (blob, ext) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${id}-${t('p.file')}-${cur.paper}.${ext}`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
   const close = () => { el.remove(); pageStyle.remove(); document.removeEventListener('keydown', onKey, true); };
   const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } else e.stopPropagation(); };   // the viewer's shortcuts stay quiet while the sheet is open
   document.addEventListener('keydown', onKey, true);
