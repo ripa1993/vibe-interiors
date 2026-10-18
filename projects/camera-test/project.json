@@ -1,1 +1,1 @@
-{"title": "Camera da letto (test)", "description": "Stanza di prova con letto e armadio, per validare i progetti multipli.", "generator": "room.js"}
+{"title": "Camera da letto (test)", "description": "Stanza di prova con letto e armadio, per validare i progetti multipli.", "generator": "room.js", "rooms": [{"name": "Camera da letto", "at": [200, 175]}]}

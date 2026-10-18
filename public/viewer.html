@@ -82,7 +82,7 @@
     #bar { top: max(6px, env(safe-area-inset-top)); left: 6px; right: 6px; flex-wrap: wrap; gap: 6px; padding: 6px; }
     #bar button { min-height: 38px; min-width: 38px; padding: 6px 11px; font-size: 14px; }
     #status { display: none; }
-    #rtctl, #fpctl { display: none; }                           /* Render and first person need a GPU / keyboard: desktop only (AO too, see #setmenu #aobtn below) */
+    #rtctl, #fpctl, #planctl { display: none; }                           /* Render and first person need a GPU / keyboard: desktop only (AO too, see #setmenu #aobtn below) */
     #home { order: 0; }
     #dot { order: 0; margin: 0 2px; }
     #nightctl { order: 1; }
@@ -118,6 +118,7 @@
   <button id="snap" title="Esporta l'immagine corrente come PNG, senza pulsanti ed etichette (P)">PNG</button>
   <span id="nightctl"><button id="nightbtn" title="Modalità notte: accende le luci (N)">Notte</button></span>
   <span id="fpctl"><button id="fpbtn" title="Prima persona: cammina nella casa (F)">Prima persona</button></span>
+  <span id="planctl"><button id="planbtn" title="Pianta: solo i muri visti dall'alto, con le misure interne delle stanze (stampa, SVG, PNG)">Pianta</button></span>
   </span>
 </div>
 <button id="gbtn" title="Show / hide groups of objects (G)">Gruppi</button>
@@ -952,6 +953,13 @@ gbtn.onclick = () => gbtn.classList.toggle('open', groupsEl.classList.toggle('op
 const _load = load;
 load = async function () { await _load(); renderGroups(current); refreshDims(); };
 
+document.getElementById('planbtn').onclick = async () => {        // top view of the walls with the interior measures of each room, see public/plan.mjs
+  if (!current) return;
+  const P = await import('../plan.mjs');
+  let meta = {}; try { const r = await fetch('project.json', { cache: 'no-store' }); if (r.ok) meta = await r.json(); } catch {}
+  const id = location.pathname.replace(/\/+$/, '').split('/').pop();
+  P.openPlan({ data: current, enabled: enabledGroups, meta, title: meta.title || id, id });
+};
 document.getElementById('dims').onclick = () => { showDims = !showDims; selected = null; refreshDims(); };
 document.getElementById('seldims').onclick = () => {
   selDims = !selDims; selected = null; tipEl.style.display = 'none';

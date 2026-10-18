@@ -36,9 +36,12 @@ for (const id of ids) {
   fs.mkdirSync(to, { recursive: true });
   fs.writeFileSync(path.join(to, 'index.html'), viewer);
   fs.copyFileSync(path.join(from, 'scene.json'), path.join(to, 'scene.json'));
+  if (fs.existsSync(path.join(from, 'project.json'))) fs.copyFileSync(path.join(from, 'project.json'), path.join(to, 'project.json'));   // room names for the plan sheet
   if (fs.existsSync(path.join(from, 'textures'))) copyDir(path.join(from, 'textures'), path.join(to, 'textures'));
   if (fs.existsSync(path.join(from, 'thumb.jpg'))) fs.copyFileSync(path.join(from, 'thumb.jpg'), path.join(to, 'thumb.jpg'));   // fallback se non si può fare lo screenshot
 }
+
+fs.copyFileSync(path.join(ROOT, 'public/plan.mjs'), path.join(OUT, 'plan.mjs'));   // plan sheet module, imported by the viewers as ../plan.mjs
 
 // font self-hosted (Geist, Geist Mono): /fonts/<nome>.woff2, come in server.js
 fs.mkdirSync(path.join(OUT, 'fonts'), { recursive: true });

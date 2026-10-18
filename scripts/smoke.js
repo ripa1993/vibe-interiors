@@ -3,6 +3,7 @@
 const fs = require('fs'), path = require('path'), os = require('os'), net = require('net');
 const { spawn, spawnSync } = require('child_process');
 const { listProjects, projectInfo, thumbStatus, findChrome } = require('./projects');
+const { pathToFileURL } = require('url');
 
 const ROOT = path.join(__dirname, '..'), PROJECTS = path.join(ROOT, 'projects');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'skp-smoke-'));
@@ -37,12 +38,29 @@ function freePort() {
       }
     }
 
+    section('plan sheet (public/plan.mjs)');
+    const { buildPlan, planSvg } = await import(pathToFileURL(path.join(ROOT, 'public/plan.mjs')).href);
+    const plans = {};
+    for (const id of ids) {
+      const data = JSON.parse(fs.readFileSync(path.join(PROJECTS, id, 'scene.json'), 'utf8'));
+      let meta = {}; try { meta = JSON.parse(fs.readFileSync(path.join(PROJECTS, id, 'project.json'), 'utf8')); } catch {}
+      const plan = plans[id] = buildPlan(data, new Set(), meta);
+      ok(`${id}: plan has walls and at least one closed room (${plan.rooms.length} found)`, plan.walls.length > 0 && plan.rooms.length > 0);
+      ok(`${id}: every room has a net area > 0 and at least one dimensioned side`, plan.rooms.every(r => r.area > 0 && r.sides.length > 0));
+      if (plan.rooms.length) ok(`${id}: planSvg fits A4 and A3 at a standard scale`, ['a4', 'a3'].every(pp => { const o = planSvg(plan, { paper: pp, title: id }); return [20, 25, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500].includes(o.scale) && /^<svg/.test(o.svg); }));
+      if (data.items.some(i => /Rimosso/.test(i.n) && !i.g)) ok(`${id}: walls to be demolished are drawn (dashed) only when "rimossi" is on`, plan.walls.every(w => !w.removed) && buildPlan(data, new Set(['rimossi']), meta).walls.some(w => w.removed));
+    }
+    if (plans['camera-test']) {                                      // the small fixture has exact known measures: 400 x 350 cm interior
+      const r = plans['camera-test'].rooms[0];
+      ok('camera-test: the room is "Camera da letto", 14.0 m2, sides 400 and 350 cm', r && r.name === 'Camera da letto' && Math.abs(r.area - 14) < 0.05 && r.sides.map(s => Math.round(s.len)).sort().join() === '350,400', r && JSON.stringify(r.sides.map(s => s.len)));
+    }
+
     section('static build');
     const dist = path.join(TMP, 'dist');
     const b = spawnSync(process.execPath, [path.join(__dirname, 'build-static.js'), '--no-thumbs'], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, SKP_DIST: dist } });
     ok('build-static.js --no-thumbs exits 0', b.status === 0, b.stderr.split('\n')[0]);
     const has = f => fs.existsSync(path.join(dist, f));
-    ok('dist has index.html, projects.json, fonts, three, _headers', ['index.html', 'projects.json', 'fonts/geist.woff2', 'fonts/geist-mono.woff2', 'three/build/three.module.js', '_headers'].every(has));
+    ok('dist has index.html, projects.json, plan.mjs, fonts, three, _headers', ['index.html', 'projects.json', 'plan.mjs', 'fonts/geist.woff2', 'fonts/geist-mono.woff2', 'three/build/three.module.js', '_headers'].every(has));
     for (const id of ids) ok(`dist/${id}/ has index.html, scene.json, textures where used`, has(`${id}/index.html`) && has(`${id}/scene.json`) && (!fs.existsSync(path.join(PROJECTS, id, 'textures')) || has(`${id}/textures`)));
     if (has('projects.json')) ok('dist/projects.json lists every project', JSON.parse(fs.readFileSync(path.join(dist, 'projects.json'), 'utf8')).map(p => p.id).join() === ids.join());
     ok('viewer in dist reaches shared files with ../ and is marked static', /\.\.\/three\//.test(fs.readFileSync(path.join(dist, ids[0], 'index.html'), 'utf8')) && /STATIC_BUILD = true/.test(fs.readFileSync(path.join(dist, ids[0], 'index.html'), 'utf8')));
@@ -61,6 +79,7 @@ function freePort() {
       const sc = await get(`/${id}/scene.json`); ok(`/${id}/scene.json is JSON`, sc.status === 200 && Array.isArray((await sc.json()).items));
     }
     ok('unknown project and path traversal are refused', (await get('/nope/')).status === 404 && [403, 404].includes((await get(`/${ids[0]}/..%2f..%2fserver.js`)).status));
+    ok('/plan.mjs and /<id>/project.json are served', (await get('/plan.mjs')).status === 200 && (await get(`/${ids[0]}/project.json`)).status === (fs.existsSync(path.join(PROJECTS, ids[0], 'project.json')) ? 200 : 404));
     ok('fonts and shared libs are served', (await get('/fonts/geist.woff2')).status === 200 && (await get('/three/build/three.module.js')).status === 200 && (await get('/vendor/oidn-weights/rt_hdr_alb_nrm_small.tza')).status === 200);
 
     section('browser');
@@ -110,6 +129,14 @@ function freePort() {
           const w = (await p.$eval('#groups', e => e.getBoundingClientRect().width));
           ok(`${id}: groups panel is 380 px wide`, Math.round(w) === 380, 'width ' + w);
         }
+        // plan sheet: opens, labels every room, paper change, closes with Esc
+        await p.click('#planbtn'); await p.waitForSelector('#plan svg');
+        const nLabels = await p.evaluate(() => [...document.querySelectorAll('#plan svg text')].filter(t => t.querySelector('tspan')).length);
+        ok(`${id}: the plan sheet opens with one label per room (${plans[id].rooms.length})`, nLabels === plans[id].rooms.length, 'labels ' + nLabels);
+        const s4 = await p.textContent('#plan svg'); await p.selectOption('#plan-paper', 'a3');
+        ok(`${id}: switching to A3 redraws the sheet`, /A3/.test(await p.textContent('#plan svg')) && s4 !== await p.textContent('#plan svg'));
+        await p.keyboard.press('Escape');
+        ok(`${id}: Esc closes the plan sheet`, (await p.$('#plan')) === null);
         // implicit "Elementi rimossi" group
         if (scene.items.some(i => /Rimosso/.test(i.n) && !i.g)) ok(`${id}: "Elementi rimossi" group exists and is off`, (await p.locator('#groups label', { hasText: 'Elementi rimossi' }).count()) === 1 && !(await p.locator('#groups label', { hasText: 'Elementi rimossi' }).locator('input').isChecked()));
         await p.close();

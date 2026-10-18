@@ -82,6 +82,10 @@ Convenzioni nei colori del viewer:
 
 Su Cloudflare Pages, collegando questo repository GitHub (Workers & Pages → Create → Pages → Connect to Git): *Build command* `npm run build`, *Build output directory* `dist`. Ogni `git push` ripubblica con l'ultimo `scene.json` committato (rigenerato con `node projects/casa-costanza/house.js`). Per limitare l'accesso: Settings → General → Enable access policy (Cloudflare Access / Zero Trust).
 
+## Pianta con le misure interne
+
+Il pulsante **Pianta** (solo desktop) apre un foglio vettoriale con i soli muri visti dall'alto e le misure interne di ogni stanza chiusa, più la superficie netta. Si stampa (anche in PDF dal dialogo del browser, A4 o A3, con scala standard) o si scarica in SVG e PNG. Le stanze si ricavano dalla geometria; per dare loro un nome basta elencarle in `projects/<nome>/project.json` con un punto interno in cm: `"rooms": [{"name": "Camera", "at": [200, 175]}]`. Limite: i muri esportati come mesh generiche (`faces`) non vengono usati.
+
 ## Aggiungere un altro modello
 
 Crea `projects/<nome>/` con un `scene.json` (a mano, da uno script o dall'export dell'MCP di SketchUp): compare da solo nell'elenco su `/` (riavvio non necessario, basta ricaricare la pagina) e si apre su `/<nome>/`. Le texture stanno in `projects/<nome>/textures/` e nella scena si citano con percorso relativo (`textures/x.png`). In `projects/<nome>/project.json` si possono dare `title`, `description` e `thumbView` (preset di camera per la miniatura, es. `"Iso 2"`). Il formato e le regole di esportazione da SketchUp sono descritti in `CLAUDE.md`.
