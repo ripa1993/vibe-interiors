@@ -68,6 +68,11 @@ function freePort() {
       let j = {}; try { j = JSON.parse(r.stdout); } catch {}
       ok('plan-report.mjs camera-test --json lists "Bedroom", 14 m2', r.status === 0 && j.rooms?.[0]?.name === 'Bedroom' && Math.abs(j.rooms[0].area_m2 - 14) < 0.05, r.stderr);
     }
+    {
+      let mcp = {}; try { mcp = JSON.parse(fs.readFileSync(path.join(ROOT, '.mcp.json'), 'utf8')); } catch {}
+      const sk = mcp.mcpServers?.sketchup;
+      ok('.mcp.json declares the "sketchup" http server (tools are named mcp__sketchup__*)', sk?.type === 'http' && /^https:\/\/api\.sketchup\.com\//.test(sk.url || ''));
+    }
     const skillsDir = path.join(ROOT, '.claude/skills');
     const skills = fs.existsSync(skillsDir) ? fs.readdirSync(skillsDir).filter(d => fs.existsSync(path.join(skillsDir, d, 'SKILL.md'))) : [];
     ok(`skills present (${skills.join(', ')})`, ['bootstrap-new-project', 'import-floor-plan', 'add-furniture', 'check-and-publish'].every(n => skills.includes(n)));

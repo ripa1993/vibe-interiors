@@ -19,7 +19,7 @@ Reply in the user's language; commit messages and repo files in English.
 If you changed the viewer, the server or the build, also take a headless screenshot of the list and of one project (see "Testing the viewer headlessly" in `CLAUDE.md`) and look at it.
 
 ## 4. Update the notes when the change deserves it
-If you learned something about the SDK, built a new kind of geometry, added a viewer feature or a `scene.json` type, or the user stated a preference, `CLAUDE.md` gets one or two lines in the matching section (no model-specific data), and the README if a user-facing behaviour changed. Tell the user in one line what you added.
+If you learned something about the SDK, built a new kind of geometry, added a viewer feature or a `scene.json` type, or the user stated a preference, `CLAUDE.md` (or `docs/sketchup.md` for SketchUp SDK facts) gets one or two lines in the matching section (no model-specific data), and the README if a user-facing behaviour changed. Tell the user in one line what you added.
 
 ## 5. Commit and push: only when asked
 - If the user has not clearly asked to commit, propose the message and ask. If they asked, commit with a short English message (what and why), then push. Never force-push; never rewrite history without an explicit request and a backup (`git bundle create ~/backup.bundle --all`).

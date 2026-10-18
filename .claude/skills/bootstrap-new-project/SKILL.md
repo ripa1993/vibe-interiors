@@ -22,7 +22,7 @@ Use the question tool when you have one, otherwise plain text. Skip what the use
    - *From a floor plan or drawings*: create the empty room first, then continue with the `import-floor-plan` skill.
    - *Copy of `camera-test`*: a furnished example to play with.
 5. **Language of their data** (room names, group labels): any; the repo's own UI and docs stay English.
-6. **How to model**: the generator script (default: free, no SketchUp needed, the model exists only in the viewer) or the SketchUp MCP (only if connected: follow "Workflow for every model change" in `CLAUDE.md`, the project folder then holds just `scene.json`).
+6. **How to model**: the generator script (default: free, no SketchUp needed, the model exists only in the viewer) or the SketchUp MCP (only if connected: read `docs/sketchup.md` and follow it, the project folder then holds just `scene.json`).
 
 ## 2. Create the project
 Generator route (default):

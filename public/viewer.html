@@ -886,8 +886,8 @@ function refreshDims() {
 const groupsEl = document.getElementById('groups'), gbtn = document.getElementById('gbtn');
 function computeGroupDefs(data) {
   const defs = new Map();
-  for (const g of data.groups || []) defs.set(g.id, { id: g.id, label: g.label || g.id, cat: g.cat || 'Altro', variant: g.variant || null, skipAll: !!g.skipAll });
-  for (const it of data.items) for (const id of [].concat(it.g || [])) if (!defs.has(id)) defs.set(id, { id, label: id, cat: 'Altro', variant: null });
+  for (const g of data.groups || []) defs.set(g.id, { id: g.id, label: g.label || g.id, cat: g.cat || 'Other', variant: g.variant || null, skipAll: !!g.skipAll });
+  for (const it of data.items) for (const id of [].concat(it.g || [])) if (!defs.has(id)) defs.set(id, { id, label: id, cat: 'Other', variant: null });
   return [...defs.values()];
 }
 function setGroup(id, on) {

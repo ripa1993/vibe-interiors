@@ -91,7 +91,9 @@ public/viewer.html     the viewer (three.js), served at /<name>/
 public/plan.mjs        the Plan sheet (walls from above + interior measures), also used by the tests
 scripts/               static build (build-static.js), project discovery (projects.js), generator helpers (scene-kit.js), smoke test (smoke.js)
 projects/<name>/       one model per folder: scene.json, textures/, thumb.jpg, project.json (optional) and, if there is one, the generator
-CLAUDE.md              project notes, generator and SketchUp workflows, tricks
+CLAUDE.md              project notes for Claude Code: workflow, viewer features, patterns
+docs/sketchup.md       the optional SketchUp route: MCP facts, Python helpers, exporter
+.claude/skills/        the four Claude Code skills (see below)
 ```
 
 ## Static publishing
@@ -133,11 +135,17 @@ Node.js and a modern browser. Runtime dependencies (three.js, a path tracer, fon
 
 ## Working with SketchUp (.skp) files
 
-SketchUp is optional: the viewer never reads `.skp` files, only the exported `scene.json`. If you model in SketchUp through the [SketchUp Connector for Claude](https://help.sketchup.com/en/sketchup-claude-connector) (Trimble's MCP service, enabled from Claude's connector settings with a Trimble ID), the repo can follow your live model:
+SketchUp is optional: the viewer never reads `.skp` files, only the exported `scene.json`. To model in SketchUp from Claude Code, the repo ships a project-scoped MCP configuration (`.mcp.json`) for Trimble's [SketchUp Connector for Claude](https://help.sketchup.com/en/sketchup-claude-connector) (an MCP service; it needs a Trimble ID):
 
-- **SketchUp to viewer:** with the MCP connected, Claude builds in the live model and exports it with the exporter described in `CLAUDE.md` (`session_state["dump_scene"]`, section "SketchUp MCP: facts and gotchas"); the result is written to `projects/<name>/scene.json` and the viewer refreshes by itself. No save of the `.skp` is needed for the preview. Units: the SketchUp API is inches only, the same as `scene.json`; the generators work in cm and convert.
+```json
+{ "mcpServers": { "sketchup": { "type": "http", "url": "https://api.sketchup.com/mcp/v1/sketchup/mcp" } } }
+```
+
+The first time you open the repo with Claude Code it asks whether to approve this server: approve it if you use SketchUp, decline it otherwise (nothing else in the repo needs it), then sign in with your Trimble ID when asked (the `/mcp` command shows the state of the servers). The name `sketchup` gives the tools the `mcp__sketchup__*` prefix used in the docs. In Claude's own apps the same connector is enabled from the connector settings. With it connected, the repo can follow your live model:
+
+- **SketchUp to viewer:** with the MCP connected, Claude builds in the live model and exports it with the exporter described in [`docs/sketchup.md`](docs/sketchup.md) (`session_state["dump_scene"]`); the result is written to `projects/<name>/scene.json` and the viewer refreshes by itself. No save of the `.skp` is needed for the preview. Units: the SketchUp API is inches only, the same as `scene.json`; the generators work in cm and convert.
 - **Viewer to SketchUp:** there is no export from `scene.json` to `.skp`. A model written by a generator script exists only in the viewer; to get it into SketchUp it has to be rebuilt through the MCP.
-- **Saving a `.skp`:** `save_model` on the MCP returns a download link. The connector runs in the cloud, creates new files only (it cannot edit an existing `.skp`) and, on a free account, generates up to 30 models, so a file is only saved when you ask for one (details in `CLAUDE.md`).
+- **Saving a `.skp`:** `save_model` on the MCP returns a download link. The connector runs in the cloud, creates new files only (it cannot edit an existing `.skp`) and, on a free account, generates up to 30 models, so a file is only saved when you ask for one (details in [`docs/sketchup.md`](docs/sketchup.md)).
 - **Why it works this way:** reading `.skp` outside SketchUp was the weak point (a web viewer rendered the colours flat and ignored the saved camera, and the free SketchUp Viewer for Desktop was discontinued), so the repo exports geometry from the live model instead.
 
 SketchUp is a trademark of Trimble; this project is not affiliated with or endorsed by Trimble.

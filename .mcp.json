@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "sketchup": {
+      "type": "http",
+      "url": "https://api.sketchup.com/mcp/v1/sketchup/mcp"
+    }
+  }
+}
