@@ -48,11 +48,11 @@ function freePort() {
       ok(`${id}: plan has walls and at least one closed room (${plan.rooms.length} found)`, plan.walls.length > 0 && plan.rooms.length > 0);
       ok(`${id}: every room has a net area > 0 and at least one dimensioned side`, plan.rooms.every(r => r.area > 0 && r.sides.length > 0));
       if (plan.rooms.length) ok(`${id}: planSvg fits A4 and A3 at a standard scale`, ['a4', 'a3'].every(pp => { const o = planSvg(plan, { paper: pp, title: id }); return [20, 25, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500].includes(o.scale) && /^<svg/.test(o.svg); }));
-      if (data.items.some(i => /Rimosso/.test(i.n) && !i.g)) ok(`${id}: walls to be demolished are drawn (dashed) only when "rimossi" is on`, plan.walls.every(w => !w.removed) && buildPlan(data, new Set(['rimossi']), meta).walls.some(w => w.removed));
+      if (data.items.some(i => /Rimosso|Removed/.test(i.n) && !i.g)) ok(`${id}: walls to be demolished are drawn (dashed) only when "removed" is on`, plan.walls.every(w => !w.removed) && buildPlan(data, new Set(['removed']), meta).walls.some(w => w.removed));
     }
     if (plans['camera-test']) {                                      // the small fixture has exact known measures: 400 x 350 cm interior
       const r = plans['camera-test'].rooms[0];
-      ok('camera-test: the room is "Camera da letto", 14.0 m2, sides 400 and 350 cm', r && r.name === 'Camera da letto' && Math.abs(r.area - 14) < 0.05 && r.sides.map(s => Math.round(s.len)).sort().join() === '350,400', r && JSON.stringify(r.sides.map(s => s.len)));
+      ok('camera-test: the room is "Bedroom", 14.0 m2, sides 400 and 350 cm', r && r.name === 'Bedroom' && Math.abs(r.area - 14) < 0.05 && r.sides.map(s => Math.round(s.len)).sort().join() === '350,400', r && JSON.stringify(r.sides.map(s => s.len)));
     }
 
     section('static build');
@@ -137,8 +137,8 @@ function freePort() {
         ok(`${id}: switching to A3 redraws the sheet`, /A3/.test(await p.textContent('#plan svg')) && s4 !== await p.textContent('#plan svg'));
         await p.keyboard.press('Escape');
         ok(`${id}: Esc closes the plan sheet`, (await p.$('#plan')) === null);
-        // implicit "Elementi rimossi" group
-        if (scene.items.some(i => /Rimosso/.test(i.n) && !i.g)) ok(`${id}: "Elementi rimossi" group exists and is off`, (await p.locator('#groups label', { hasText: 'Elementi rimossi' }).count()) === 1 && !(await p.locator('#groups label', { hasText: 'Elementi rimossi' }).locator('input').isChecked()));
+        // implicit "Removed elements" group
+        if (scene.items.some(i => /Rimosso|Removed/.test(i.n) && !i.g)) ok(`${id}: "Removed elements" group exists and is off`, (await p.locator('#groups label', { hasText: 'Removed elements' }).count()) === 1 && !(await p.locator('#groups label', { hasText: 'Removed elements' }).locator('input').isChecked()));
         await p.close();
       }
 

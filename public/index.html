@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>SKP Watch · Progetti</title>
+<title>SKP Watch · Projects</title>
 <style>
   @font-face { font-family: 'Geist'; src: url(fonts/geist.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
   @font-face { font-family: 'Geist Mono'; src: url(fonts/geist-mono.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
@@ -38,8 +38,8 @@
 </head>
 <body>
 <main>
-  <h1>Progetti</h1>
-  <p class="sub">Scegli un modello da aprire. L'indirizzo di ogni progetto si può salvare nei preferiti.</p>
+  <h1>Projects</h1>
+  <p class="sub">Pick a model to open. The address of each project can be bookmarked.</p>
   <div id="grid" aria-live="polite">
     <div class="card skel" aria-hidden="true"><div class="thumb"></div><div class="info"><div class="line" style="width:55%"></div><div class="line" style="width:35%"></div></div></div>
   </div>
@@ -51,19 +51,19 @@
   try { list = await (await fetch('projects.json', { cache: 'no-store' })).json(); }
   catch (e) { console.error('projects.json load failed:', e); }
   grid.innerHTML = '';
-  if (!list) { grid.innerHTML = '<p class="msg">Non riesco a caricare l\'elenco dei progetti. Ricarica la pagina.</p>'; return; }
-  if (!list.length) { grid.innerHTML = '<p class="msg">Nessun progetto trovato: aggiungi <code>projects/&lt;nome&gt;/scene.json</code>.</p>'; return; }
-  const none = () => { const n = document.createElement('span'); n.className = 'none'; n.textContent = 'nessuna anteprima'; return n; };
+  if (!list) { grid.innerHTML = '<p class="msg">Could not load the project list. Reload the page.</p>'; return; }
+  if (!list.length) { grid.innerHTML = '<p class="msg">No project found: add <code>projects/&lt;name&gt;/scene.json</code>.</p>'; return; }
+  const none = () => { const n = document.createElement('span'); n.className = 'none'; n.textContent = 'no preview'; return n; };
   for (const p of list) {
     const a = document.createElement('a');
     a.className = 'card'; a.href = p.id + '/';                    // relative: works under any subpath
     const t = document.createElement('div'); t.className = 'thumb';
-    if (p.thumb) { const img = new Image(); img.src = p.id + '/thumb.jpg'; img.alt = 'Anteprima di ' + p.title; img.loading = 'lazy'; img.onerror = () => { img.remove(); t.append(none()); }; t.append(img); }
+    if (p.thumb) { const img = new Image(); img.src = p.id + '/thumb.jpg'; img.alt = 'Preview of ' + p.title; img.loading = 'lazy'; img.onerror = () => { img.remove(); t.append(none()); }; t.append(img); }
     else t.append(none());
     const info = document.createElement('div'); info.className = 'info';
     const h = document.createElement('h2'); h.textContent = p.title; info.append(h);
     if (p.description) { const d = document.createElement('p'); d.textContent = p.description; info.append(d); }
-    if (p.items != null) { const m = document.createElement('div'); m.className = 'meta'; m.textContent = p.items.toLocaleString('it-IT') + ' oggetti'; info.append(m); }
+    if (p.items != null) { const m = document.createElement('div'); m.className = 'meta'; m.textContent = p.items.toLocaleString('en-GB') + ' objects'; info.append(m); }
     a.append(t, info); grid.append(a);
   }
 })();
