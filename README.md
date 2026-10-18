@@ -6,7 +6,39 @@ A small Node server watches the `projects/<name>/scene.json` files; when you ope
 
 > The viewer shows the exported geometry, not the SketchUp file. A script-generated model exists only here, not in SketchUp.
 
-## Quick start
+## Getting started
+
+You need Node.js 20+ and a modern browser. [Claude Code](https://claude.com/claude-code) is optional but recommended: the repo ships skills that walk you through the whole process. Chrome is only needed for the thumbnails and the browser tests.
+
+**1. Run the viewer**
+
+```bash
+git clone <this repo> && cd vibe-interiors
+npm install
+node server.js 4173        # then open http://localhost:4173
+```
+
+You land on the project list, with two examples: `camera-test` (a minimal bedroom, the easiest one to read) and `casa-costanza` (a large real flat with Italian labels).
+
+**2. Create your own project**
+
+- *With Claude Code* (easiest): open the folder in Claude Code and run `/bootstrap-new-project`. It asks a few basic questions (name, what the place is, rough sizes), creates `projects/<name>/` with a working generator and shows it in the viewer at `http://localhost:4173/<name>/`.
+- *By hand*: copy `projects/camera-test/` to `projects/<name>/`, change the title in `project.json` and the numbers at the top of `room.js` (centimetres), then run `node projects/<name>/room.js`. That writes `scene.json`; reload the list and your project is there.
+
+**3. Design in it**
+
+Edit the table of measures at the top of the generator and run it again: the page redraws by itself and keeps your camera. From there:
+
+- `/import-floor-plan`: model the real place step by step. Share the technical drawing first if you have one, then go room by room with your hand-made measures, and finally share photos to validate the result. You decide when it is done.
+- `/add-furniture`: add furniture, appliances, lights or alternative layouts as switchable groups, and compare them in the **Groups** panel.
+- **Plan** button, or `node scripts/plan-report.mjs <name>`: the interior measures of every room, to check the model against your tape measure; the sheet can be printed or saved as PDF, SVG, PNG.
+- **First person**, **Night** and **Render** to look at the result like a visitor.
+
+**4. Check and share**
+
+`/check-and-publish` runs the tests (`npm test`), refreshes the project thumbnails (`npm run thumbs`), reviews the changes and commits or pushes when you ask. See [Skills for Claude Code](#skills-for-claude-code) for all of them, and [Static publishing](#static-publishing) to put the viewer on any static host.
+
+## Running the viewer
 
 ```bash
 npm install
