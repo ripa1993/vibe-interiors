@@ -93,6 +93,17 @@ The **Plan** button (desktop only) opens a vector sheet with only the walls seen
 
 Create `projects/<name>/` with a `scene.json` (by hand, from a script or from the SketchUp MCP export): it shows up in the list at `/` by itself (no restart, just reload the page) and opens at `/<name>/`. Textures go in `projects/<name>/textures/` and the scene refers to them with a relative path (`textures/x.png`). In `projects/<name>/project.json` you can set `title`, `description`, `thumbView` (camera preset for the thumbnail, e.g. `"Iso 2"`), `generator` (the script that writes the scene) and `rooms`. `projects/camera-test/` is a minimal example. The format and the SketchUp export rules are described in `CLAUDE.md`.
 
+## Skills for Claude Code
+
+The repo ships four skills in `.claude/skills/`, available as soon as you open it with Claude Code (invoke them as `/<name>` or just describe what you want):
+
+| Skill | What it does |
+|---|---|
+| `bootstrap-new-project` | asks a few basic questions and sets up a new `projects/<name>/` folder with a working generator, shown in the viewer |
+| `import-floor-plan` | model a real place step by step: technical drawing first, then room by room with your hand-made measures, then photos to validate. You decide when it is done |
+| `add-furniture` | add furniture, appliances, lights or variants as switchable groups, from a datasheet, a photo or plain measures |
+| `check-and-publish` | run the tests, refresh the thumbnails, review the changes, commit and push when you ask |
+
 ## Tests
 
 `npm test` runs `scripts/smoke.js`: the generators reproduce the committed `scene.json` files, the static build has the expected files, the server routes answer and, if Chrome is available, the viewer opens without errors (list, menus, groups, per-project reload, plan sheet). Stale thumbnails are reported as a warning: regenerate them with `npm run thumbs`.

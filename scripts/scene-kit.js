@@ -1,7 +1,7 @@
 // Shared helpers for the generator scripts (projects/<name>/*.js that write a scene.json without SketchUp).
 // All inputs are in cm (x = right, y = up in plan, z = height); the output is in inches. See CLAUDE.md "scene.json schema".
 //   const kit = require('../../scripts/scene-kit').createScene({ defaultOn: ['id', ...] });
-//   const { box, slab, tray, tube, rbox, mesh, group, defGroup, light, items, inch } = kit;
+//   const { box, wall, slab, tray, tube, rbox, mesh, group, defGroup, light, items, inch } = kit;
 //   ...draw...
 //   kit.write(OUT, { camera: kit.camera(eyeCm, targetCm), spawn: kit.spawn([x, y], yawDeg), ceiling: kit.ceiling(polyCm, z0, z1) });
 // `items` is the live array: generators may push raw items or patch the last one (e.g. `items[items.length - 1].tex = {...}`).
@@ -20,6 +20,24 @@ function createScene({ defaultOn = [] } = {}) {
   const rbox = (n, c, b, r, top, bot = 0) => add({ n, c, rbox: { b: b.map(inch), r: inch(r), top: inch(top), bot: inch(bot) } });
   const quad = (a, b, c, d) => [a, b, c, d].map(pt);
   const mesh = (n, c, qs) => add({ n, c, faces: qs.map(q => quad(...q)) });   // item 'faces' from quads in cm (arches and non-axis-aligned shapes)
+
+  // Wall with openings: rect = [x0, y0, x1, y1] in plan (the long side gives the direction), h = height, openings = [{ from, to, sill = 0, head = 210 }]
+  // with from / to as coordinates along the long side. Emits full-height segments between the openings, a sill piece under and a lintel piece over each one.
+  // Names: <n>_Seg1.., <n>_Sill1.., <n>_Lintel1..  (a door is an opening with sill 0: no sill piece; a window has sill and head).
+  const wall = (n, c, [x0, y0, x1, y1], h, openings = [], z0 = 0) => {
+    const alongX = x1 - x0 >= y1 - y0, [a0, a1] = alongX ? [x0, x1] : [y0, y1];
+    const part = (name, from, to, zl, zh) => { if (to - from > 1e-6 && zh - zl > 1e-6) alongX ? box(name, c, from, y0, zl, to, y1, zh) : box(name, c, x0, from, zl, x1, to, zh); };
+    const ops = openings.map(o => ({ sill: 0, head: 210, ...o })).sort((p, q) => p.from - q.from);
+    let cur = a0;
+    ops.forEach((o, i) => {
+      if (o.from < cur - 1e-6 || o.to > a1 + 1e-6 || o.to <= o.from) throw new Error(`wall ${n}: opening ${i + 1} (${o.from}..${o.to}) is outside the wall (${a0}..${a1}) or overlaps another one`);
+      part(`${n}_Seg${i + 1}`, cur, o.from, z0, z0 + h);
+      if (o.sill > 0) part(`${n}_Sill${i + 1}`, o.from, o.to, z0, z0 + o.sill);
+      if (o.head < h) part(`${n}_Lintel${i + 1}`, o.from, o.to, z0 + o.head, z0 + h);
+      cur = o.to;
+    });
+    part(`${n}_Seg${ops.length + 1}`, cur, a1, z0, z0 + h);
+  };
 
   // Switchable groups (all off in the viewer unless in `defaultOn`; items without a group are always drawn).
   //   defGroup(id, label, category, [variant])  -> groups with the same `variant` are mutually exclusive
@@ -43,7 +61,7 @@ function createScene({ defaultOn = [] } = {}) {
     fs.writeFileSync(out, '{' + head.join(',') + ',"items":[\n' + items.map(i => JSON.stringify(i)).join(',\n') + '\n]}\n');
   }
 
-  return { items, GROUPS, lights, inch, box, slab, tray, tube, rbox, quad, mesh, defGroup, group, light, camera, spawn, ceiling, write };
+  return { items, GROUPS, lights, inch, box, wall, slab, tray, tube, rbox, quad, mesh, defGroup, group, light, camera, spawn, ceiling, write };
 }
 
 module.exports = { createScene };

@@ -55,6 +55,38 @@ function freePort() {
       ok('camera-test: the room is "Bedroom", 14.0 m2, sides 400 and 350 cm', r && r.name === 'Bedroom' && Math.abs(r.area - 14) < 0.05 && r.sides.map(s => Math.round(s.len)).sort().join() === '350,400', r && JSON.stringify(r.sides.map(s => s.len)));
     }
 
+    section('helpers and skills');
+    {
+      const k = require('./scene-kit').createScene();
+      k.wall('/W', [1, 2, 3], [0, 0, 400, 10], 260, [{ from: 100, to: 190 }, { from: 250, to: 330, sill: 90, head: 220 }]);
+      ok('kit.wall: segments, sill and lintel pieces for a door and a window', k.items.map(i => i.n).join() === '/W_Seg1,/W_Lintel1,/W_Seg2,/W_Sill2,/W_Lintel2,/W_Seg3', k.items.map(i => i.n).join());
+      let threw = false; try { k.wall('/X', [1, 2, 3], [0, 0, 400, 10], 260, [{ from: 100, to: 190 }, { from: 150, to: 200 }]); } catch { threw = true; }
+      ok('kit.wall refuses overlapping openings', threw);
+    }
+    if (ids.includes('camera-test')) {
+      const r = spawnSync(process.execPath, [path.join(__dirname, 'plan-report.mjs'), 'camera-test', '--json'], { cwd: ROOT, encoding: 'utf8' });
+      let j = {}; try { j = JSON.parse(r.stdout); } catch {}
+      ok('plan-report.mjs camera-test --json lists "Bedroom", 14 m2', r.status === 0 && j.rooms?.[0]?.name === 'Bedroom' && Math.abs(j.rooms[0].area_m2 - 14) < 0.05, r.stderr);
+    }
+    const skillsDir = path.join(ROOT, '.claude/skills');
+    const skills = fs.existsSync(skillsDir) ? fs.readdirSync(skillsDir).filter(d => fs.existsSync(path.join(skillsDir, d, 'SKILL.md'))) : [];
+    ok(`skills present (${skills.join(', ')})`, ['bootstrap-new-project', 'import-floor-plan', 'add-furniture', 'check-and-publish'].every(n => skills.includes(n)));
+    for (const name of skills) {
+      const txt = fs.readFileSync(path.join(skillsDir, name, 'SKILL.md'), 'utf8'), fm = (txt.match(/^---\n([\s\S]*?)\n---\n/) || [])[1] || '';
+      const desc = (fm.match(/^description:\s*(.+)$/m) || [])[1] || '';
+      ok(`skill ${name}: front matter has name = folder and a description`, new RegExp(`^name:\\s*${name}\\s*$`, 'm').test(fm) && desc.length > 40 && desc.length <= 1024 && !/TODO|TBD/.test(txt));
+    }
+    {   // the bootstrap template, filled in, writes a valid scene with one closed room of the requested size
+      const tpl = fs.readFileSync(path.join(skillsDir, 'bootstrap-new-project/room-template.js'), 'utf8')
+        .replace(/__TITLE__/g, 'Template test').replace(/__ID__/g, 'template-test').replace('__W__', '450').replace('__D__', '320').replace('__H__', '270')
+        .replace("require('../../scripts/scene-kit')", `require(${JSON.stringify(path.join(__dirname, 'scene-kit.js'))})`);
+      const gen = path.join(TMP, 'room.js'), out = path.join(TMP, 'template-scene.json');
+      fs.writeFileSync(gen, tpl);
+      const r = spawnSync(process.execPath, [gen, out], { cwd: ROOT, encoding: 'utf8' });
+      let room; if (r.status === 0) room = buildPlan(JSON.parse(fs.readFileSync(out, 'utf8')), new Set(), { rooms: [{ name: 'Room', at: [225, 160] }] }).rooms[0];
+      ok('bootstrap template: generates a closed 450 x 320 cm room named "Room"', !!room && room.name === 'Room' && room.sides.map(x => Math.round(x.len)).sort().join() === '320,450', r.stderr);
+    }
+
     section('static build');
     const dist = path.join(TMP, 'dist');
     const b = spawnSync(process.execPath, [path.join(__dirname, 'build-static.js'), '--no-thumbs'], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, SKP_DIST: dist } });
