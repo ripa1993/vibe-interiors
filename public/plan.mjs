@@ -99,7 +99,12 @@ function traceOuter(lab, W, H, id, bb) {
 export function buildPlan(data, enabled = new Set(), meta = {}) {
   const walls = shapesAt(data, enabled, SLICE_Z);
   if (!walls.length) return { walls: [], rooms: [], bounds: null };
-  const top = Math.max(...walls.map(w => w.top)), roomZ = top - 20;
+  // Cut for the rooms: just under the lintels. Use the lowest wall top that matters (>= 15% of the wall area): a column or a chimney breast taller
+  // than the walls must not move the cut above the lintels (every door would open), and a short half-wall must not pull it down into the openings.
+  const area = w => { const b = bboxOf(w.pts); return (b.x1 - b.x0) * (b.y1 - b.y0); }, byTop = new Map();
+  for (const w of walls) byTop.set(Math.round(w.top), (byTop.get(Math.round(w.top)) || 0) + area(w));
+  const totalArea = [...byTop.values()].reduce((a, b) => a + b, 0), significant = [...byTop].filter(([, a]) => a >= 0.15 * totalArea);
+  const top = significant.length ? Math.min(...significant.map(([z]) => z)) : [...byTop].sort((a, b) => b[1] - a[1])[0][0], roomZ = top - 20;
   const solid = shapesAt(data, enabled, roomZ);
   const all = walls.concat(solid), allPts = all.flatMap(s => s.pts);
   const bb = bboxOf(allPts), gx0 = bb.x0 - 20, gy0 = bb.y0 - 20;
@@ -135,6 +140,7 @@ export function buildPlan(data, enabled = new Set(), meta = {}) {
   // names from project.json
   const named = new Map();
   for (const rm of meta.rooms || []) {
+    if (!rm || !Array.isArray(rm.at) || rm.at.length < 2) { if (typeof console !== 'undefined') console.warn('plan: a "rooms" entry needs {"name": ..., "at": [x, y]} (cm), skipped:', JSON.stringify(rm)); continue; }
     const i = Math.floor((rm.at[0] - gx0) / CELL), j = Math.floor((rm.at[1] - gy0) / CELL);
     const id = i >= 0 && j >= 0 && i < W && j < H ? lab[j * W + i] : 0;
     if (id && !regions[id - 1].border) named.set(id, rm.name);

@@ -22,7 +22,8 @@ const C = { wall: WALL_WHITE, est: WALL_WHITE, rem: [226, 160, 130, 255],
 //   group(id, () => { ...box()/tube()/slab()... })  -> tutto cio' che disegni dentro prende il gruppo `id`
 const DEFAULT_ON = ['divano-v2', 'tavolo', 'soggiorno-libreria', 'soggiorno-tv', 'parete-testata', 'mensole-testata', 'porta-camera', 'armadio-v2', 'comodini', 'letto-v1', 'wc-grande-arredo', 'antibagno-scarpiera', 'antibagno-elvarli', 'ingresso-attaccapanni', 'ingresso-stampe-mensola', 'wc-piccolo-arredo', 'cucina-v2', 'camera-nord', 'soggiorno-billy', 'ripostiglio-stagione', 'ripostiglio-pulizia', 'luci', 'bovindo-salottino'];   // accesi al caricamento del viewer
 const kit = require('../../scripts/scene-kit').createScene({ defaultOn: DEFAULT_ON });   // geometry helpers, groups, lights and the scene.json writer, shared with the other projects
-const { items, inch, box, slab, tray, tube, rbox, quad, mesh, defGroup, group, light } = kit;
+const { items, inch, box, slab, tray, tube, rbox, quad, mesh, defGroup, group } = kit;
+const light = d => kit.light(Object.assign({ g: 'luci' }, d));   // every light of this project belongs to the "luci" group unless it says otherwise
 defGroup('attacchi-cucina', 'Attacchi cucina', 'Attacchi');
 defGroup('attacchi-wc-grande', 'Attacchi WC grande', 'Attacchi');
 defGroup('attacchi-wc-piccolo', 'Attacchi WC piccolo', 'Attacchi');

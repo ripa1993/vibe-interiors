@@ -9,7 +9,8 @@ const args = process.argv.slice(2);
 if (args[0] && /\.json$/i.test(args[0])) { console.warn(`note: "${args[0]}" is ignored, all projects under projects/ are served`); args.shift(); }
 const PORT = Number(args[0] || process.env.PORT || 4173);
 const PUBLIC = path.join(__dirname, 'public');
-const PROJECTS = path.join(__dirname, 'projects');
+const PROJECTS = process.env.PROJECTS_DIR ? path.resolve(process.env.PROJECTS_DIR) : path.join(__dirname, 'projects');   // PROJECTS_DIR: serve another folder (used by scripts/smoke.js)
+const HOST = process.env.HOST || '127.0.0.1';                                                                              // local only by default; HOST=0.0.0.0 to open it from a phone on the same network
 const THREE = path.join(__dirname, 'node_modules', 'three');
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css',
@@ -71,7 +72,8 @@ const server = http.createServer((req, res) => {
 
 // Watch projects/ recursively (not single files): editors and writers often replace the file (new inode).
 const timers = new Map();
-fs.watch(PROJECTS, { recursive: true }, (event, name) => {
+if (!fs.existsSync(PROJECTS)) console.warn(`no projects folder (${PROJECTS}): nothing to watch`);
+else fs.watch(PROJECTS, { recursive: true }, (event, name) => {
   const parts = String(name || '').split(path.sep);
   if (parts.length !== 2 || parts[1] !== 'scene.json') return;
   const id = parts[0];
@@ -83,7 +85,7 @@ fs.watch(PROJECTS, { recursive: true }, (event, name) => {
   }, 150));
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, HOST, () => {
   const ids = listProjects(PROJECTS);
   console.log(`Serving ${ids.length} project(s): ${ids.join(', ') || '(none)'}`);
   console.log(`Open http://localhost:${PORT}`);

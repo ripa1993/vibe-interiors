@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:,">
 <title>Vibe Interiors</title>
 <style>
   @font-face { font-family: 'Geist'; src: url(../fonts/geist.woff2) format('woff2'); font-weight: 100 900; font-display: swap; }
@@ -60,6 +61,7 @@
   #groups h4:first-child { margin-top: 0; }
   #groups h4.cat { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
   #groups h4.cat:hover { color: var(--accent); }
+  #groups h4.cat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
   #groups h4.cat .chev { display: inline-block; width: 10px; transition: transform .12s; font-size: 14px; line-height: 1; }
   #groups h4.cat.open .chev { transform: rotate(90deg); }
   #groups h4.cat .cnt { margin-left: auto; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--accent); }
@@ -101,7 +103,7 @@
     #views { position: static; flex-direction: row; background: none; border: 0; padding: 0; box-shadow: none; min-width: 0; }
     #views button { text-align: center; }
     #views, #setmenu button, #snap { display: none; }
-    #bar.open #views { display: flex; order: 3; flex: 1 1 100%; gap: 6px; }
+    #bar.open #views { display: flex; order: 3; flex: 1 1 100%; gap: 6px; flex-wrap: wrap; }
     #bar.open #setmenu button, #bar.open #snap { display: inline-block; order: 4; }
     #bar.open #setmenu #aobtn { display: none; }
     #groups { left: 6px; right: 6px; bottom: calc(max(6px, env(safe-area-inset-bottom)) + 44px); max-height: 60vh; width: auto; }
@@ -115,7 +117,7 @@
 <div id="bar"><a id="home" data-i18n="v.home" data-i18n-title="v.home.title" href="../" title="Project list">← Projects</a><span id="dot"></span><span id="status" data-i18n="v.connecting">connecting…</span><button id="morebtn" data-i18n-title="v.more.title" title="Views, dimensions">Views ▾</button>
   <span id="camctl"><button id="camBtn" data-i18n-title="v.cam.title" data-i18n-aria="v.cam.aria" title="Camera views (1-9)" aria-label="Camera views" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208,56H180.28L166.65,35.56A8,8,0,0,0,160,32H96a8,8,0,0,0-6.65,3.56L75.71,56H48A24,24,0,0,0,24,80V192a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V80A24,24,0,0,0,208,56Zm8,136a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V80a8,8,0,0,1,8-8H80a8,8,0,0,0,6.66-3.56L100.28,48h55.43l13.63,20.44A8,8,0,0,0,176,72h32a8,8,0,0,1,8,8ZM128,88a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,88Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,128,160Z"/></svg></button>
   <span id="views"></span></span>
-  <span id="setctl"><button id="setBtn" data-i18n-title="v.set.title" data-i18n-aria="v.set.aria" title="Settings: dimensions, units, click to measure" aria-label="Settings" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z"/></svg></button><span id="setmenu"><button id="dims" data-i18n="v.dims" data-i18n-title="v.dims.title" title="Show overall dimensions (M)">Dims</button><button id="unit" data-i18n-title="v.unit.title" title="Change units (U)">cm</button><button id="seldims" data-i18n="v.measure" data-i18n-title="v.measure.title" class="on" title="Show / hide the dimensions on click and the hover tooltip (K)">Click to measure</button><button id="aobtn" data-i18n-title="v.ao.title" title="Occlusione ambientale: ombre di contatto negli angoli (O)">AO</button><span id="langrow" role="group" data-i18n-aria="lang.label"><button data-lang="en">EN</button><button data-lang="it">IT</button></span></span></span>
+  <span id="setctl"><button id="setBtn" data-i18n-title="v.set.title" data-i18n-aria="v.set.aria" title="Settings: dimensions, units, click to measure" aria-label="Settings" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z"/></svg></button><span id="setmenu"><button id="dims" data-i18n="v.dims" data-i18n-title="v.dims.title" title="Show overall dimensions (M)">Dims</button><button id="unit" data-i18n-title="v.unit.title" title="Change units (U)">cm</button><button id="seldims" data-i18n="v.measure" data-i18n-title="v.measure.title" class="on" title="Show / hide the dimensions on click and the hover tooltip (K)">Click to measure</button><button id="aobtn" data-i18n-title="v.ao.title" title="Ambient occlusion: contact shadows in the corners (O)">AO</button><span id="langrow" role="group" data-i18n-aria="lang.label"><button data-lang="en">EN</button><button data-lang="it">IT</button></span></span></span>
   <span id="actions">
   <span id="rtctl"><button id="rtbtn" data-i18n-title="v.render.title" title="Path-traced render: global illumination, soft shadows (T)">Render</button> <button id="dnbtn" data-i18n-title="v.denoise.title" class="active" title="Denoiser (a-trous filter guided by normals and depth) on the render">Denoise</button></span>
   <button id="snap" data-i18n-title="v.png.title" title="Save the image on screen as a PNG, without buttons or labels (P)">PNG</button>
@@ -894,6 +896,7 @@ function computeGroupDefs(data) {
   const defs = new Map();
   for (const g of data.groups || []) defs.set(g.id, { id: g.id, label: g.label || g.id, cat: g.cat || t('g.other'), variant: g.variant || null, skipAll: !!g.skipAll });
   for (const it of data.items) for (const id of [].concat(it.g || [])) if (!defs.has(id)) defs.set(id, { id, label: id, cat: t('g.other'), variant: null });
+  for (const L of data.lights || []) for (const id of [].concat(L.g || [])) if (!defs.has(id)) defs.set(id, { id, label: id, cat: t('g.other'), variant: null });   // a light's group needs a checkbox too
   return [...defs.values()];
 }
 function setGroup(id, on) {
@@ -912,7 +915,8 @@ function setAllGroups(on) {
 }
 function groupsChanged() {
   const live = groupDefs.map(d => d.id).filter(id => enabledGroups.has(id));
-  setParams({ g: live.length ? live.join(',') : null });
+  const hasDefaults = ((current && current.groups) || []).some(g => g.on);                      // ?g= (empty) keeps "everything off" instead of re-applying the defaults
+  setParams({ g: live.length ? live.join(',') : (hasDefaults ? '' : null) });
   selected = null;
   if (current) { build(current); refreshDims(); }
   renderGroups(current);
@@ -931,12 +935,14 @@ function renderGroups(data) {
   const cats = [...new Set(groupDefs.map(d => d.cat))];
   for (const cat of cats) {
     const inCat = groupDefs.filter(x => x.cat === cat), isOpen = !collapsedCats.has(cat);
-    const h = document.createElement('h4'); h.className = 'cat' + (isOpen ? ' open' : '');   // titolo cliccabile: > chiuso, v aperto
+    const h = document.createElement('h4'); h.className = 'cat' + (isOpen ? ' open' : '');   // clickable title: > folded, v open
+    h.tabIndex = 0; h.setAttribute('role', 'button'); h.setAttribute('aria-expanded', String(isOpen)); h.dataset.cat = cat;
     const chev = document.createElement('span'); chev.className = 'chev'; chev.textContent = '›';
     h.append(chev, cat);
     const nOn = inCat.filter(d => enabledGroups.has(d.id)).length;
     if (!isOpen && nOn) { const c = document.createElement('span'); c.className = 'cnt'; c.textContent = t('g.on', { n: nOn }); h.appendChild(c); }
     h.onclick = () => { collapsedCats.has(cat) ? collapsedCats.delete(cat) : collapsedCats.add(cat); saveCollapsed(); renderGroups(current); };
+    h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); h.onclick(); for (const x of groupsEl.querySelectorAll('h4.cat')) if (x.dataset.cat === cat) x.focus(); } };   // the panel is rebuilt: put the focus back on the same header
     groupsEl.appendChild(h);
     if (!isOpen) continue;
     for (const d of inCat) {
@@ -960,11 +966,13 @@ const _load = load;
 load = async function () { await _load(); renderGroups(current); refreshDims(); };
 
 document.getElementById('planbtn').onclick = async () => {        // top view of the walls with the interior measures of each room, see public/plan.mjs
-  if (!current) return;
-  const P = await import('../plan.mjs');
-  let meta = {}; try { const r = await fetch('project.json', { cache: 'no-store' }); if (r.ok) meta = await r.json(); } catch {}
-  const id = location.pathname.replace(/\/+$/, '').split('/').pop();
-  P.openPlan({ data: current, enabled: enabledGroups, meta, title: meta.title || id, id });
+  try {
+    if (!current) return;
+    const P = await import('../plan.mjs');
+    let meta = {}; try { const r = await fetch('project.json', { cache: 'no-store' }); if (r.ok) meta = await r.json(); } catch {}
+    const id = location.pathname.replace(/\/+$/, '').split('/').pop();
+    P.openPlan({ data: current, enabled: enabledGroups, meta, title: meta.title || id, id });
+  } catch (e) { console.error('plan failed:', e); }
 };
 document.getElementById('dims').onclick = () => { showDims = !showDims; selected = null; refreshDims(); };
 document.getElementById('seldims').onclick = () => {
@@ -986,7 +994,8 @@ renderer.domElement.addEventListener('pointermove', ev => {
   if (!hit) { tipEl.style.display = 'none'; return; }
   const sz = new THREE.Box3().setFromObject(hit).getSize(new THREE.Vector3());
   const parts = hit.name.split('/').filter(Boolean);
-  tipEl.innerHTML = `<b>${parts.slice(-2).join(' / ')}</b><br>${fmt(sz.x)} × ${fmt(sz.y)} × ${fmt(sz.z)}`;
+  const nameEl = document.createElement('b'); nameEl.textContent = parts.slice(-2).join(' / ');   // textContent: item names come from the scene file
+  tipEl.replaceChildren(nameEl, document.createElement('br'), `${fmt(sz.x)} × ${fmt(sz.y)} × ${fmt(sz.z)}`);
   tipEl.style.cssText += `;display:block;left:${ev.clientX + 14}px;top:${ev.clientY + 14}px`;
 });
 renderer.domElement.addEventListener('pointerleave', () => tipEl.style.display = 'none');
@@ -1133,6 +1142,8 @@ addEventListener('keyup', e => {
 });
 addEventListener('blur', () => held.clear());
 addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;   // browser chords (Ctrl+P, Cmd+F, Ctrl+N...) are not viewer shortcuts
+  if (e.key === 'Escape') barEl.classList.remove('cam', 'set');                                      // Esc folds the camera / settings dropdowns
   if (e.key === 'o' || e.key === 'O') return aoBtn.click();
   if (e.key === 't' || e.key === 'T') return rtBtn.click();
   if (e.key === 'n' || e.key === 'N') return nightBtn.click();

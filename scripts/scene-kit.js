@@ -45,7 +45,7 @@ function createScene({ defaultOn = [] } = {}) {
   const defGroup = (id, label, cat, variant) => GROUPS.push(Object.assign({ id, label, cat }, variant ? { variant } : {}, defaultOn.includes(id) ? { on: true } : {}));
   const group = (id, fn) => { const from = items.length; fn(); for (let k = from; k < items.length; k++) items[k].g = id; };
   // Night-mode light source (position in cm; the rest as in the schema: d, a, pen, c, i, r, sh, g)
-  const light = d => lights.push(Object.assign({ t: 'spot', g: 'luci' }, d, { p: d.p.map(inch) }));
+  const light = d => lights.push(Object.assign({ t: 'spot' }, d, { p: d.p.map(inch) }));   // pass g: '<group id>' to tie the light to a group (no default)
 
   const camera = (eye, target, fov = 35) => ({ eye: eye.map(inch), target: target.map(inch), up: [0, 0, 1], fov });
   const spawn = (p, yaw) => ({ p: p.map(inch), yaw });

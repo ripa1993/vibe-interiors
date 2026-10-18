@@ -1,7 +1,7 @@
 // Builds the STATIC version in dist/ (for any static host): no server, no automatic reload.
 // dist/index.html = project list, dist/<id>/ = viewer + scene.json + textures + thumb.jpg of each projects/<id>/, shared dist/three and dist/vendor.
 // Thumbnails are screenshots taken with headless Chrome (playwright-core). Without Chrome (e.g. in a hosted build environment) projects/<id>/thumb.jpg is used if it exists.
-// Uso: node scripts/build-static.js [--save-thumbs] [--no-thumbs]
+// Usage: node scripts/build-static.js [--save-thumbs] [--no-thumbs]
 //   --save-thumbs: also writes projects/<id>/thumb.jpg to commit (error if Chrome is missing); --no-thumbs: skips the screenshots (uses only projects/<id>/thumb.jpg)
 const fs = require('fs'), path = require('path'), http = require('http');
 const { listProjects, projectInfo, sceneHash, thumbStatus, findChrome, FONTS, fontPath } = require('./projects');
@@ -51,7 +51,7 @@ for (const name of Object.keys(FONTS)) fs.copyFileSync(fontPath(ROOT, name), pat
 // three.js served from the same site (same relative paths as server.js): only build/ (ES modules) and the OrbitControls utilities are needed
 copyDir(path.join(THREE, 'build'), path.join(OUT, 'three/build'), f => /three\.(module|core|webgpu|tsl)\.js$/.test(f));   // webgpu + tsl: WebGPU path tracer
 copyDir(path.join(THREE, 'examples/jsm/controls'), path.join(OUT, 'three/examples/jsm/controls'));
-copyDir(path.join(THREE, 'examples/jsm/postprocessing'), path.join(OUT, 'three/examples/jsm/postprocessing'), f => /\.js$/.test(f));   // path tracer (Pass.js) + occlusione ambientale (EffectComposer, GTAOPass)
+copyDir(path.join(THREE, 'examples/jsm/postprocessing'), path.join(OUT, 'three/examples/jsm/postprocessing'), f => /\.js$/.test(f));   // path tracer (Pass.js) + ambient occlusion (EffectComposer, GTAOPass)
 copyDir(path.join(THREE, 'examples/jsm/shaders'), path.join(OUT, 'three/examples/jsm/shaders'), f => /(Copy|Output|GTAO|PoissonDenoise)Shader\.js$/.test(f));
 fs.mkdirSync(path.join(OUT, 'three/examples/jsm/math'), { recursive: true });
 fs.copyFileSync(path.join(THREE, 'examples/jsm/math/SimplexNoise.js'), path.join(OUT, 'three/examples/jsm/math/SimplexNoise.js'));
@@ -61,6 +61,14 @@ for (const [pkg, files] of [['oidn-web', ['dist/oidn.js']], ['@pmndrs/upscaler',
   const from = path.join(ROOT, 'node_modules', pkg), to = path.join(OUT, 'vendor', pkg);
   if (!files) { copyDir(path.join(from, 'dist'), path.join(to, 'dist'), f => /\.js$/.test(f)); continue; }
   for (const f of files) { fs.mkdirSync(path.dirname(path.join(to, f)), { recursive: true }); fs.copyFileSync(path.join(from, f), path.join(to, f)); }
+}
+
+// licence texts of everything copied into dist (MIT, Apache-2.0 and OFL want the notice to travel with the copies): dist/licenses/<package>.txt
+fs.mkdirSync(path.join(OUT, 'licenses'), { recursive: true });
+for (const pkg of ['three', 'three-gpu-pathtracer', 'three-mesh-bvh', 'oidn-web', '@pmndrs/upscaler', 'oidn-weights', '@fontsource-variable/geist', '@fontsource-variable/geist-mono']) {
+  const dir = path.join(ROOT, 'node_modules', pkg), f = fs.existsSync(dir) && fs.readdirSync(dir).find(n => /^licen[cs]e(\.txt|\.md)?$/i.test(n));
+  if (f) fs.copyFileSync(path.join(dir, f), path.join(OUT, 'licenses', pkg.replace('/', '__') + '.txt'));
+  else console.warn(`no licence file found for ${pkg}`);
 }
 
 // _headers file (read by hosts that support that format): no indexing, no cache on scene.json / projects.json, a day of cache on the shared libraries and fonts
@@ -90,11 +98,11 @@ async function makeThumbs() {
   const browser = await chromium.launch({ executablePath: exe, headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   try {
     for (const id of ids) {
-      const page = await browser.newPage({ viewport: { width: 1200, height: 750 }, deviceScaleFactor: 1 });
+      const page = await browser.newPage({ viewport: { width: 1200, height: 750 }, deviceScaleFactor: 1, locale: 'en-US' })   // the viewer follows the browser language; the thumbnail does not show text anyway;
       try {
         const view = projectInfo(PROJECTS, id).thumbView;
         await page.goto(`http://127.0.0.1:${port}/${id}/` + (view ? '?view=' + encodeURIComponent(view) : ''), { waitUntil: 'networkidle' });
-        await page.waitForFunction(() => /objects/.test(document.getElementById('status').textContent), null, { timeout: 120000 });
+        await page.waitForFunction(() => /objects|oggetti/.test(document.getElementById('status').textContent), null, { timeout: 120000 });
         await page.addStyleTag({ content: '#bar, #gbtn, #groups, #fphint, #tip, #labels { display: none !important; }' });
         await page.waitForTimeout(1500);                                   // first frames + textures
         const out = path.join(OUT, id, 'thumb.jpg');

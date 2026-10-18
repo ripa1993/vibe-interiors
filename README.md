@@ -21,7 +21,17 @@ You land on the project list, with two examples: `camera-test` (a minimal bedroo
 **2. Create your own project**
 
 - *With Claude Code* (easiest): open the folder in Claude Code and run `/bootstrap-new-project`. It asks a few basic questions (name, what the place is, rough sizes), creates `projects/<name>/` with a working generator and shows it in the viewer at `http://localhost:4173/<name>/`.
-- *By hand*: copy `projects/camera-test/` to `projects/<name>/`, change the title in `project.json` and the numbers at the top of `room.js` (centimetres), then run `node projects/<name>/room.js`. That writes `scene.json`; reload the list and your project is there.
+- *By hand*: fill in the room template and run it (the numbers are centimetres):
+
+  ```bash
+  mkdir projects/my-room
+  sed -e 's/__TITLE__/My room/; s/__ID__/my-room/g; s/__W__/450/; s/__D__/320/; s/__H__/270/' \
+      .claude/skills/bootstrap-new-project/room-template.js > projects/my-room/room.js
+  echo '{"title": "My room", "generator": "room.js"}' > projects/my-room/project.json
+  node projects/my-room/room.js
+  ```
+
+  That writes `scene.json`; reload the list and your project is there. (`projects/camera-test/` is a furnished example to read, but its furniture is placed for a fixed 400 x 350 cm room.)
 
 **3. Design in it**
 
@@ -43,6 +53,8 @@ npm install
 node server.js 4173
 open http://localhost:4173
 ```
+
+The server is local only (it listens on 127.0.0.1); `HOST=0.0.0.0 node server.js 4173` opens it to a phone on the same network.
 
 `/` lists the projects (every `projects/<name>/` folder with a `scene.json`) and `/<name>/` opens the viewer for that project: the URL can be bookmarked, view parameters included (`/casa-costanza/?view=Iso+2`). The argument is the port (default 4173). Stop the server with `pkill -f "node server.js"`. It only needs a restart when `server.js` changes; for `public/viewer.html` and `public/index.html` a page reload is enough.
 
@@ -155,7 +167,7 @@ SketchUp is a trademark of Trimble; this project is not affiliated with or endor
 
 ## License
 
-- Code (`server.js`, `public/`, `scripts/`): [MIT](LICENSE).
+- Code and documentation (`server.js`, `public/`, `scripts/`, `.claude/skills/`, `docs/`, README, CLAUDE.md): [MIT](LICENSE).
 - Content (`projects/`, textures included): [CC BY 4.0](LICENSE-content). The parquet texture was procedurally generated with Claude.
-- Geist and Geist Mono fonts ([SIL OFL 1.1](https://openfontlicense.org)), from the `@fontsource-variable` npm package; [Phosphor](https://phosphoricons.com) icons (MIT).
+- Third-party, served with the viewer: [three.js](https://threejs.org), [three-gpu-pathtracer](https://github.com/gkjohnson/three-gpu-pathtracer), [three-mesh-bvh](https://github.com/gkjohnson/three-mesh-bvh), `oidn-web` and `@pmndrs/upscaler` (all MIT); the denoiser weights `oidn-weights` (Apache-2.0); the Geist and Geist Mono fonts ([SIL OFL 1.1](https://openfontlicense.org)) from `@fontsource-variable`; [Phosphor](https://phosphoricons.com) icons (MIT). `npm run build` copies their licence texts to `dist/licenses/`.
 - An interior design experiment made with Claude Code. Not affiliated with or endorsed by IKEA or by any other brand mentioned in the comments and in the module names.

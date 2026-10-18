@@ -18,10 +18,11 @@ function freePort() {
 }
 
 (async () => {
-  let server;
+  let server, fxServer;
   try {
     section('projects');
     ok(`found ${ids.length} project(s): ${ids.join(', ')}`, ids.length > 0);
+    if (!ids.length) throw new Error('no project in projects/ (needs projects/<id>/scene.json): nothing to test');
     for (const id of ids) {
       let scene; try { scene = JSON.parse(fs.readFileSync(path.join(PROJECTS, id, 'scene.json'), 'utf8')); } catch (e) { ok(`${id}: scene.json is valid JSON`, false, e.message); continue; }
       ok(`${id}: scene.json has ${scene.items?.length} items, camera and units`, Array.isArray(scene.items) && scene.items.length > 0 && !!scene.camera && scene.units === 'inches');
@@ -55,6 +56,23 @@ function freePort() {
       ok('camera-test: the room is "Bedroom", 14.0 m2, sides 400 and 350 cm', r && r.name === 'Bedroom' && Math.abs(r.area - 14) < 0.05 && r.sides.map(s => Math.round(s.len)).sort().join() === '350,400', r && JSON.stringify(r.sides.map(s => s.len)));
     }
 
+    {   // robustness of the plan sheet, on a small scene built with the kit
+      const mk = column => {
+        const k = require('./scene-kit').createScene(), C = [200, 200, 200, 255];
+        k.box('/Floor', C, -10, -10, -4, 410, 360, 0);
+        k.wall('/West', C, [-10, -10, 0, 360], 260); k.wall('/North', C, [0, 350, 400, 360], 260); k.wall('/East', C, [400, -10, 410, 360], 260);
+        k.wall('/South', C, [-10, -10, 410, 0], 260, [{ from: 100, to: 190, head: 210 }]);
+        if (column) k.box('/Column', C, 300, 200, 0, 330, 230, 300);       // ungrouped, taller than the walls
+        return JSON.parse(JSON.stringify({ items: k.items }));
+      };
+      ok('plan: a room with a door has 1 closed room', buildPlan(mk(false), new Set(), {}).rooms.length === 1);
+      ok('plan: a column taller than the walls does not open the doors (still 1 room)', buildPlan(mk(true), new Set(), {}).rooms.length === 1);
+      const warn0 = console.warn; console.warn = () => {};
+      let threw = false, bp; try { bp = buildPlan(mk(false), new Set(), { rooms: [{ name: 'x' }, { name: 'ok', at: [200, 175] }] }); } catch { threw = true; }
+      console.warn = warn0;
+      ok('plan: a "rooms" entry without "at" is skipped, the others still name their room', !threw && bp.rooms.length === 1 && bp.rooms[0].name === 'ok');
+    }
+
     section('helpers and skills');
     {
       const k = require('./scene-kit').createScene();
@@ -62,6 +80,8 @@ function freePort() {
       ok('kit.wall: segments, sill and lintel pieces for a door and a window', k.items.map(i => i.n).join() === '/W_Seg1,/W_Lintel1,/W_Seg2,/W_Sill2,/W_Lintel2,/W_Seg3', k.items.map(i => i.n).join());
       let threw = false; try { k.wall('/X', [1, 2, 3], [0, 0, 400, 10], 260, [{ from: 100, to: 190 }, { from: 150, to: 200 }]); } catch { threw = true; }
       ok('kit.wall refuses overlapping openings', threw);
+      k.light({ p: [10, 10, 100], i: 100 }); k.light({ p: [10, 10, 100], g: 'lamps' });
+      ok('kit.light adds no default group, only the one passed', k.lights[0].g === undefined && k.lights[1].g === 'lamps');
     }
     if (ids.includes('camera-test')) {
       const r = spawnSync(process.execPath, [path.join(__dirname, 'plan-report.mjs'), 'camera-test', '--json'], { cwd: ROOT, encoding: 'utf8' });
@@ -116,7 +136,7 @@ function freePort() {
     const b = spawnSync(process.execPath, [path.join(__dirname, 'build-static.js'), '--no-thumbs'], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, SKP_DIST: dist } });
     ok('build-static.js --no-thumbs exits 0', b.status === 0, b.stderr.split('\n')[0]);
     const has = f => fs.existsSync(path.join(dist, f));
-    ok('dist has index.html, projects.json, plan.mjs, i18n.mjs, fonts, three, _headers', ['index.html', 'projects.json', 'plan.mjs', 'i18n.mjs', 'fonts/geist.woff2', 'fonts/geist-mono.woff2', 'three/build/three.module.js', '_headers'].every(has));
+    ok('dist has index.html, projects.json, plan.mjs, i18n.mjs, licence texts, fonts, three, _headers', ['index.html', 'projects.json', 'plan.mjs', 'i18n.mjs', 'licenses/three.txt', 'licenses/oidn-weights.txt', 'fonts/geist.woff2', 'fonts/geist-mono.woff2', 'three/build/three.module.js', '_headers'].every(has));
     for (const id of ids) ok(`dist/${id}/ has index.html, scene.json, textures where used`, has(`${id}/index.html`) && has(`${id}/scene.json`) && (!fs.existsSync(path.join(PROJECTS, id, 'textures')) || has(`${id}/textures`)));
     if (has('projects.json')) ok('dist/projects.json lists every project', JSON.parse(fs.readFileSync(path.join(dist, 'projects.json'), 'utf8')).map(p => p.id).join() === ids.join());
     ok('viewer in dist reaches shared files with ../ and is marked static', /\.\.\/three\//.test(fs.readFileSync(path.join(dist, ids[0], 'index.html'), 'utf8')) && /STATIC_BUILD = true/.test(fs.readFileSync(path.join(dist, ids[0], 'index.html'), 'utf8')));
@@ -134,9 +154,25 @@ function freePort() {
       ok(`/${id}/ serves the viewer`, (await get(`/${id}/`)).status === 200);
       const sc = await get(`/${id}/scene.json`); ok(`/${id}/scene.json is JSON`, sc.status === 200 && Array.isArray((await sc.json()).items));
     }
+    const raw = reqPath => new Promise(res => { const c = net.connect(port, '127.0.0.1', () => c.write(`GET ${reqPath} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n`)); let b = ''; c.on('data', d => b += d); c.on('end', () => res({ status: +(b.match(/^HTTP\/1\.1 (\d+)/) || [])[1], body: b })); c.on('error', () => res({ status: 0, body: '' })); });
+    const traversal = ['/three/../../server.js', '/three/..%2f..%2fserver.js', '/vendor/../../server.js', '/vendor/..%2f..%2fserver.js', '/fonts/../server.js', `/${ids[0]}/textures/../../server.js`, `/${ids[0]}/textures/..%2f..%2fserver.js`, '/..%2fserver.js', '/%2e%2e/server.js'];
+    const bad = []; for (const tp of traversal) { const r = await raw(tp); if (![403, 404].includes(r.status) || /createServer/.test(r.body)) bad.push(`${tp} -> ${r.status}`); }
+    ok(`path traversal is refused on the wire (${traversal.length} variants, raw socket)`, bad.length === 0, bad.join('; '));
     ok('unknown project and path traversal are refused', (await get('/nope/')).status === 404 && [403, 404].includes((await get(`/${ids[0]}/..%2f..%2fserver.js`)).status));
     ok('/plan.mjs, /i18n.mjs and /<id>/project.json are served', (await get('/plan.mjs')).status === 200 && (await get('/i18n.mjs')).status === 200 && (await get(`/${ids[0]}/project.json`)).status === (fs.existsSync(path.join(PROJECTS, ids[0], 'project.json')) ? 200 : 404));
     ok('fonts and shared libs are served', (await get('/fonts/geist.woff2')).status === 200 && (await get('/three/build/three.module.js')).status === 200 && (await get('/vendor/oidn-weights/rt_hdr_alb_nrm_small.tza')).status === 200);
+
+    // a second server on a throw-away projects folder: hostile names, a broken project.json and two projects to touch
+    const fxDir = path.join(TMP, 'fx-projects'), fxBox = name => ({ n: name, c: [200, 160, 120, 255], box: [-20, -20, 0, 20, 20, 40] });
+    const fxScene = items => JSON.stringify({ units: 'inches', camera: { eye: [60, -60, 40], target: [0, 0, 8], up: [0, 0, 1], fov: 35 }, items });
+    fs.mkdirSync(path.join(fxDir, 'xss'), { recursive: true });
+    fs.writeFileSync(path.join(fxDir, 'xss/scene.json'), fxScene([fxBox('/Room/<img src=x onerror=window.__xss=1>/Table')]));
+    fs.writeFileSync(path.join(fxDir, 'xss/project.json'), JSON.stringify({ title: '<b>bold</b> title', description: '<i>x</i>', rooms: [{ name: 'no position' }] }));
+    for (const n of ['a', 'b']) { fs.mkdirSync(path.join(fxDir, n), { recursive: true }); fs.copyFileSync(path.join(PROJECTS, ids[0], 'scene.json'), path.join(fxDir, n, 'scene.json')); }
+    const fxPort = await freePort(), fxBase = `http://127.0.0.1:${fxPort}`;
+    fxServer = spawn(process.execPath, [path.join(ROOT, 'server.js'), String(fxPort)], { cwd: ROOT, env: { ...process.env, PROJECTS_DIR: fxDir }, stdio: ['ignore', 'pipe', 'pipe'] });
+    await new Promise((res, rej) => { fxServer.stdout.on('data', d => /Open http/.test(d) && res()); fxServer.on('exit', c => rej(new Error('fixture server exited ' + c))); setTimeout(() => rej(new Error('fixture server did not start')), 8000); });
+    ok('PROJECTS_DIR serves another folder (3 fixture projects)', (await (await fetch(fxBase + '/projects.json')).json()).length === 3);
 
     section('browser');
     let chromium; try { ({ chromium } = require('playwright-core')); } catch {}
@@ -144,13 +180,13 @@ function freePort() {
     if (!chromium || !exe) warn('no Chrome / playwright-core: browser checks skipped (set CHROME_PATH)');
     else {
       const browser = await chromium.launch({ executablePath: exe, headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-      const open = async (url, w = 1300, h = 800) => {
+      const open = async (url, w = 1300, h = 800, origin = base) => {
         const p = await browser.newPage({ viewport: { width: w, height: h }, locale: 'en-US' });   // the tests read English labels; Italian is checked on its own below
         p.errors = [];
         p.on('pageerror', e => p.errors.push('pageerror: ' + e.message));
         p.on('console', m => m.type() === 'error' && p.errors.push('console: ' + m.text()));
         p.on('response', r => r.status() >= 400 && !/favicon/.test(r.url()) && p.errors.push(`HTTP ${r.status()} ${r.url()}`));
-        await p.goto(base + url, { waitUntil: 'networkidle' });
+        await p.goto(origin + url, { waitUntil: 'networkidle' });
         return p;
       };
       const loaded = p => p.waitForFunction(() => /objects|oggetti/.test(document.getElementById('status').textContent), null, { timeout: 120000 });
@@ -211,18 +247,52 @@ function freePort() {
         await it.close();
       }
 
-      if (ids.length >= 2) {                                         // reload events reach only the viewers of the changed project
+      {   // shortcuts, menus, groups, phones (read-only against the real projects)
+        const p = await open(`/${ids[0]}/`); await loaded(p);
+        await p.keyboard.press('Control+n'); await p.keyboard.press('Meta+f');
+        ok('keys: browser chords (Ctrl+N, Cmd+F) do not trigger viewer shortcuts', !(await p.$eval('#nightbtn', e => e.classList.contains('active'))) && !(await p.evaluate(() => window.fpState && window.fpState())));
+        await p.click('#camBtn'); await p.keyboard.press('Escape');
+        ok('keys: Esc folds the camera dropdown', !(await p.isVisible('#views')));
+        if (JSON.parse(fs.readFileSync(path.join(PROJECTS, ids[0], 'scene.json'), 'utf8')).groups?.some(g => g.on)) {
+          await p.click('#gbtn'); await p.click('#groups .acts button >> nth=1'); await p.waitForTimeout(300);
+          await p.reload({ waitUntil: 'networkidle' }); await loaded(p);
+          ok('groups: "All off" survives a reload when the scene has default-on groups', (await p.textContent('#gbtn')) === 'Groups');
+        }
+        await p.click('#gbtn'); const head = p.locator('#groups h4.cat').first(); await head.focus(); await p.keyboard.press('Enter');
+        ok('groups: a category header folds from the keyboard (aria-expanded)', (await p.locator('#groups h4.cat').first().getAttribute('aria-expanded')) === 'false');
+        await p.close();
+        for (const lang of ['en', 'it']) {
+          const m = await open(`/${ids[0]}/?lang=${lang}`, 390, 844); await loaded(m); await m.click('#morebtn'); await m.waitForTimeout(300);
+          const right = await m.$$eval('#views button', bs => Math.max(...bs.map(b => b.getBoundingClientRect().right)));
+          ok(`mobile (390 px, ${lang}): every camera view button is inside the window`, right <= 390, 'rightmost edge ' + Math.round(right));
+          await m.close();
+        }
+      }
+
+      {   // hostile project data and broken metadata (fixture server)
+        const hl = await open('/', 1300, 800, fxBase); await hl.waitForSelector('a.card');
+        ok('xss: project titles and descriptions are shown as text on the list', (await hl.$$eval('a.card h2', h => h.map(x => x.textContent))).includes('<b>bold</b> title') && (await hl.$$eval('a.card h2 b, a.card p i', e => e.length)) === 0);
+        await hl.close();
+        const x = await open('/xss/', 1300, 800, fxBase); await loaded(x);
+        await x.mouse.move(650, 400); await x.waitForTimeout(500);
+        ok('xss: the hover tooltip shows an item name as text, not as HTML', (await x.isVisible('#tip')) && (await x.$$eval('#tip img', i => i.length)) === 0 && /<img/.test(await x.textContent('#tip')) && (await x.evaluate(() => window.__xss)) === undefined);
+        await x.click('#planbtn'); await x.waitForSelector('#plan');
+        ok('plan: a project.json "rooms" entry without "at" does not break the Plan button', !x.errors.length, x.errors.join('; '));
+        await x.close();
+      }
+
+      {   // reload events reach only the viewers of the changed project (fixture copies: the real files are never touched)
         const pages = [];
-        for (const id of ids.slice(0, 2)) {
-          const p = await open(`/${id}/`); await loaded(p);
+        for (const id of ['a', 'b']) {
+          const p = await open(`/${id}/`, 1300, 800, fxBase); await loaded(p);
           await p.evaluate(() => { window.__r = 0; new EventSource('events').addEventListener('reload', () => window.__r++); });
           pages.push(p);
         }
         await pages[0].waitForTimeout(600);
-        const f = path.join(PROJECTS, ids[0], 'scene.json'); fs.writeFileSync(f, fs.readFileSync(f));   // same bytes: only the mtime changes
+        const f = path.join(fxDir, 'a/scene.json'); fs.writeFileSync(f, fs.readFileSync(f));   // same bytes: only the mtime changes
         await pages[0].waitForTimeout(2000);
         const r = await Promise.all(pages.map(p => p.evaluate(() => window.__r)));
-        ok(`touching ${ids[0]} reloads its viewer and not ${ids[1]}`, r[0] >= 1 && r[1] === 0, JSON.stringify(r));
+        ok('touching one project reloads its viewer and not the other one', r[0] >= 1 && r[1] === 0, JSON.stringify(r));
         for (const p of pages) await p.close();
       }
       await browser.close();
@@ -231,6 +301,7 @@ function freePort() {
     fails++; console.log('  FAIL unexpected error —', e.stack || e);
   } finally {
     if (server) server.kill();
+    if (fxServer) fxServer.kill();
     fs.rmSync(TMP, { recursive: true, force: true });
   }
   console.log(`\n${fails ? 'FAILED' : 'passed'}: ${fails} failure(s), ${warns} warning(s)`);

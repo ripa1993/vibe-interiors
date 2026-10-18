@@ -1,17 +1,33 @@
 {
   "name": "vibe-interiors",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "An interior design experiment made with Claude Code: a local, auto-refreshing 3D viewer for building models",
+  "keywords": [
+    "threejs",
+    "interior-design",
+    "3d-viewer",
+    "floor-plan",
+    "webgpu",
+    "path-tracing",
+    "sketchup",
+    "claude-code"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ripa1993/vibe-interiors.git"
+  },
+  "author": "Simone Ripamonti",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node scripts/smoke.js",
     "build": "node scripts/build-static.js",
     "thumbs": "node scripts/build-static.js --save-thumbs"
   },
-  "keywords": [],
-  "author": "Simone Ripamonti",
-  "license": "MIT",
-  "type": "commonjs",
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
