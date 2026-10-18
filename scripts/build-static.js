@@ -42,7 +42,7 @@ for (const id of ids) {
 }
 
 fs.copyFileSync(path.join(ROOT, 'public/plan.mjs'), path.join(OUT, 'plan.mjs'));
-fs.copyFileSync(path.join(ROOT, 'public/i18n.mjs'), path.join(OUT, 'i18n.mjs'));   // UI strings, imported by the list, the viewers and plan.mjs   // plan sheet module, imported by the viewers as ../plan.mjs
+fs.copyFileSync(path.join(ROOT, 'public/i18n.mjs'), path.join(OUT, 'i18n.mjs'));   // UI strings, imported by the list, the viewers and plan.mjs
 
 // self-hosted fonts (Geist, Geist Mono): /fonts/<name>.woff2, as in server.js
 fs.mkdirSync(path.join(OUT, 'fonts'), { recursive: true });

@@ -104,7 +104,7 @@ export function buildPlan(data, enabled = new Set(), meta = {}) {
   const area = w => { const b = bboxOf(w.pts); return (b.x1 - b.x0) * (b.y1 - b.y0); }, byTop = new Map();
   for (const w of walls) byTop.set(Math.round(w.top), (byTop.get(Math.round(w.top)) || 0) + area(w));
   const totalArea = [...byTop.values()].reduce((a, b) => a + b, 0), significant = [...byTop].filter(([, a]) => a >= 0.15 * totalArea);
-  const top = significant.length ? Math.min(...significant.map(([z]) => z)) : [...byTop].sort((a, b) => b[1] - a[1])[0][0], roomZ = top - 20;
+  const top = significant.length ? Math.min(...significant.map(([z]) => z)) : [...byTop].sort((a, b) => b[1] - a[1])[0][0], roomZ = top - 4;   // tops are whole cm: 4 cm under the wall top still crosses every lintel (tall windows can end ~5 cm below it)
   const solid = shapesAt(data, enabled, roomZ);
   const all = walls.concat(solid), allPts = all.flatMap(s => s.pts);
   const bb = bboxOf(allPts), gx0 = bb.x0 - 20, gy0 = bb.y0 - 20;
@@ -140,7 +140,7 @@ export function buildPlan(data, enabled = new Set(), meta = {}) {
   // names from project.json
   const named = new Map();
   for (const rm of meta.rooms || []) {
-    if (!rm || !Array.isArray(rm.at) || rm.at.length < 2) { if (typeof console !== 'undefined') console.warn('plan: a "rooms" entry needs {"name": ..., "at": [x, y]} (cm), skipped:', JSON.stringify(rm)); continue; }
+    if (!rm || !Array.isArray(rm.at) || rm.at.length < 2 || typeof rm.name !== 'string') { if (typeof console !== 'undefined') console.warn('plan: a "rooms" entry needs {"name": ..., "at": [x, y]} (cm), skipped:', JSON.stringify(rm)); continue; }
     const i = Math.floor((rm.at[0] - gx0) / CELL), j = Math.floor((rm.at[1] - gy0) / CELL);
     const id = i >= 0 && j >= 0 && i < W && j < H ? lab[j * W + i] : 0;
     if (id && !regions[id - 1].border) named.set(id, rm.name);
@@ -244,6 +244,7 @@ export function openPlan({ data, enabled, meta = {}, title = t('p.title'), id = 
     #plan .sheet { background: #fff; border: 1px solid var(--line, #dfe3ea); box-shadow: 0 8px 24px rgba(28,35,48,.10); max-width: 100%; max-height: 100%; display: flex; }
     #plan .sheet svg { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 110px); }
     #plan .msg { color: var(--muted, #667085); }
+    #plan .msg code { color: var(--ink, #1c2330); background: var(--line-soft, #e8ebf0); padding: 1px 5px; border-radius: 4px; }
     @media print { body > *:not(#plan) { display: none !important; } #plan { position: static; background: #fff; display: block; }
       #plan .pbar { display: none; } #plan .pbody { padding: 0; display: block; overflow: visible; }
       #plan .sheet { border: 0; box-shadow: none; display: block; } #plan .sheet svg { width: var(--w) !important; height: var(--h) !important; max-width: none; max-height: none; } }

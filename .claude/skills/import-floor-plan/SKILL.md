@@ -14,7 +14,7 @@ The goal is a generator script whose walls match the real place. The user decide
 - **Coordinates**: cm, x right, y up in plan, z up; origin at an inner corner of the first room; keep it fixed for the whole project.
 - Use `kit.wall(name, color, [x0, y0, x1, y1], height, openings)` from `scripts/scene-kit.js` (opening = `{from, to, sill, head}` along the wall's long side; a door is `{from, to, head: 210}`, a window adds `sill`). Keep a table of rooms / walls / openings at the top of the script so each measure lives in one place.
 - Walls to be demolished are named `..._Removed` (they join the "Removed elements" group, hidden by default). Furniture is not part of this skill (`add-furniture`).
-- Doors need lintels (`head` < wall height) so the Plan sheet can close the rooms; an arch or curved opening is a `mesh` item and is ignored by the Plan sheet (tell the user).
+- Doors and windows need lintels (`head` at least ~5 cm below the wall top: the Plan sheet cuts 4 cm under the top) so it can close the rooms; an arch or curved opening is a `mesh` item and is ignored by the Plan sheet (tell the user).
 
 ## Start
 Find or create the project: `projects/<id>/` with a generator (`project.json` `generator`). If it does not exist, run the `bootstrap-new-project` skill first (empty room), then come back.

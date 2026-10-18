@@ -161,10 +161,11 @@ let lang = null;
 export function getLang() {
   if (lang) return lang;
   if (typeof window === 'undefined') return (lang = 'en');          // Node (tests, scripts): English, and don't touch localStorage (Node 26 warns about it)
+  const norm = v => String(v || '').toLowerCase().slice(0, 2);          // 'IT', 'it-IT' and 'it_CH' all mean Italian
   let l = null;
-  try { l = new URLSearchParams(location.search).get('lang'); } catch {}
-  if (!LANGS.includes(l)) { l = null; try { l = localStorage.getItem('lang'); } catch {} }
-  if (!LANGS.includes(l)) { try { l = (navigator.language || '').toLowerCase().startsWith('it') ? 'it' : 'en'; } catch { l = 'en'; } }
+  try { l = norm(new URLSearchParams(location.search).get('lang')); } catch {}
+  if (!LANGS.includes(l)) { l = null; try { l = norm(localStorage.getItem('lang')); } catch {} }
+  if (!LANGS.includes(l)) { try { l = norm(navigator.language) === 'it' ? 'it' : 'en'; } catch { l = 'en'; } }
   return (lang = l);
 }
 export const locale = () => LOCALES[getLang()];
@@ -174,8 +175,10 @@ export function t(key, params = {}) {
 }
 export function setLang(l) {
   if (!LANGS.includes(l)) return;
-  try { localStorage.setItem('lang', l); } catch {}
-  const u = new URL(location.href); u.searchParams.delete('lang');     // an explicit ?lang= would win over the saved choice
+  let saved = true; try { localStorage.setItem('lang', l); } catch { saved = false; }
+  const u = new URL(location.href);
+  if (saved) u.searchParams.delete('lang');                            // an explicit ?lang= would win over the saved choice
+  else u.searchParams.set('lang', l);                                  // nothing could be saved (storage blocked): keep the choice in the URL
   if (u.href === location.href) location.reload(); else location.replace(u);
 }
 export function applyI18n(root = document) {
@@ -184,5 +187,5 @@ export function applyI18n(root = document) {
   for (const el of root.querySelectorAll('[data-i18n-html]')) el.innerHTML = t(el.dataset.i18nHtml);
   for (const el of root.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle);
   for (const el of root.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
-  for (const b of root.querySelectorAll('[data-lang]')) { b.classList.toggle('on', b.dataset.lang === getLang()); b.onclick = () => setLang(b.dataset.lang); }
+  for (const b of root.querySelectorAll('[data-lang]')) { b.classList.toggle('on', b.dataset.lang === getLang()); b.setAttribute('aria-pressed', String(b.dataset.lang === getLang())); b.onclick = () => setLang(b.dataset.lang); }
 }

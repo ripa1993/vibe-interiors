@@ -113,7 +113,7 @@ docs/sketchup.md       the optional SketchUp route: MCP facts, Python helpers, e
 
 ## Static publishing
 
-`npm run build` creates `dist/` (ignored by git): `index.html` (the project list), `<name>/` with the viewer, `scene.json`, textures and thumbnail of each project, and the shared three.js modules, with relative paths, `noindex` / `robots.txt` and no automatic reload (just reload the page). No Node server is needed: it works on any static host, even in a sub-folder. A `_headers` file with the cache rules is written too, for hosts that read that format.
+`npm run build` creates `dist/` (ignored by git): `index.html` (the project list), `<name>/` with the viewer, `scene.json`, textures and thumbnail of each project, and the shared three.js modules, with relative paths, `noindex` / `robots.txt` and no automatic reload (just reload the page). No Node server is needed: it works on any static host, even in a sub-folder. (`_headers` and `robots.txt` only take effect when `dist/` is served from the root of the host.) A `_headers` file with the cache rules is written too, for hosts that read that format.
 
 **Thumbnails.** The build takes a screenshot of every project with headless Chrome (`playwright-core`, Chrome from `CHROME_PATH` or the standard locations), using the camera saved in the scene or the `thumbView` view of `project.json`. If Chrome is not available (typical of hosted build environments) it uses `projects/<name>/thumb.jpg` if it exists, otherwise it shows a placeholder. To generate and commit the thumbnails locally: `npm run thumbs`.
 

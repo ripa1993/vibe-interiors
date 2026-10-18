@@ -793,6 +793,13 @@ new MutationObserver(() => {                                       // aria-expan
   document.getElementById('camBtn').setAttribute('aria-expanded', barEl.classList.contains('cam'));
   document.getElementById('setBtn').setAttribute('aria-expanded', barEl.classList.contains('set'));
 }).observe(barEl, { attributes: true, attributeFilter: ['class'] });
+{   // toggle buttons: aria-pressed follows their .on / .active class; the Groups button opens a panel (aria-expanded follows .open)
+  const sync = b => b.setAttribute('aria-pressed', String(b.classList.contains('on') || b.classList.contains('active')));
+  const po = new MutationObserver(ms => ms.forEach(m => sync(m.target)));
+  for (const id of ['dims', 'seldims', 'aobtn', 'rtbtn', 'dnbtn', 'nightbtn', 'fpbtn']) { const b = document.getElementById(id); sync(b); po.observe(b, { attributes: true, attributeFilter: ['class'] }); }
+  const gb = document.getElementById('gbtn'); gb.setAttribute('aria-haspopup', 'true'); gb.setAttribute('aria-expanded', 'false');
+  new MutationObserver(() => gb.setAttribute('aria-expanded', String(gb.classList.contains('open')))).observe(gb, { attributes: true, attributeFilter: ['class'] });
+}
 document.getElementById('camBtn').onclick = () => { barEl.classList.remove('set'); barEl.classList.toggle('cam'); };
 document.getElementById('setBtn').onclick = () => { barEl.classList.remove('cam'); barEl.classList.toggle('set'); };
 document.addEventListener('pointerdown', e => {                  // click elsewhere folds the open dropdown
@@ -885,7 +892,7 @@ function refreshDims() {
   if (sel) drawDims(new THREE.Box3().setFromObject(sel));
   else if (showDims) drawDims(new THREE.Box3().setFromObject(model));
   else clearDims();
-  for (const o of model.children) if (o.isMesh) for (const m of [].concat(o.material)) m.emissive?.setHex(o === sel ? 0x5a2a00 : 0x000000);
+  for (const o of model.children) if (o.isMesh) for (const m of [].concat(o.material)) { if (o === sel) m.emissive?.setHex(0x5a2a00); else if (emissiveMats.includes(m)) m.emissive.copy(m.color); else m.emissive?.setHex(0x000000); }   // "em" items keep their glow
   document.getElementById('dims').classList.toggle('on', showDims);
   document.getElementById('seldims').classList.toggle('on', selDims);
   document.getElementById('unit').textContent = UNITS[unit];
@@ -947,8 +954,8 @@ function renderGroups(data) {
     if (!isOpen) continue;
     for (const d of inCat) {
       const l = document.createElement('label'), cb = document.createElement('input');
-      cb.type = 'checkbox'; cb.checked = enabledGroups.has(d.id);
-      cb.onchange = () => setGroup(d.id, cb.checked);
+      cb.type = 'checkbox'; cb.checked = enabledGroups.has(d.id); cb.dataset.gid = d.id;
+      cb.onchange = () => { setGroup(d.id, cb.checked); for (const x of groupsEl.querySelectorAll('input[data-gid]')) if (x.dataset.gid === d.id) x.focus(); };   // the panel is rebuilt: keep the focus on this checkbox
       l.append(cb, d.label + (d.variant ? '  ·  ' + t('g.variant') : ''));
       groupsEl.appendChild(l);
     }
@@ -1120,7 +1127,7 @@ function stepMove(now) {
   if (fp) { stepFP(dt); return; }
   if (!held.size) return;
   let r = 0, f = 0, u = 0;
-  for (const k of held) { const m = MOVE[k]; r += m[0]; f += m[1]; u += m[2]; }
+  for (const k of held) { const m = MOVE[k]; if (!m) continue; r += m[0]; f += m[1]; u += m[2]; }   // 'shift' lives in `held` too
   const fwd = controls.target.clone().sub(camera.position); fwd.z = 0;
   if (fwd.lengthSq() < 1e-6) { fwd.set(0, 1, 0).applyQuaternion(camera.quaternion); fwd.z = 0; }   // looking straight down: use screen-up
   fwd.normalize();
@@ -1163,8 +1170,9 @@ addEventListener('keydown', e => {
 
 if (!window.STATIC_BUILD) {                              // static version (no server): no automatic reload
   const es = new EventSource('events');
-  es.onopen = () => dot.className = 'live';
-  es.onerror = () => dot.className = '';
+  let sseWasDown = false;                                  // after a reconnect (server restarted), fetch what changed meanwhile
+  es.onopen = () => { dot.className = 'live'; if (sseWasDown) { sseWasDown = false; load(); } };
+  es.onerror = () => { dot.className = ''; sseWasDown = true; };
   es.addEventListener('reload', () => {
     dot.className = 'flash'; setTimeout(() => dot.className = 'live', 400);
     load();

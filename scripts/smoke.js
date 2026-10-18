@@ -67,10 +67,17 @@ function freePort() {
       };
       ok('plan: a room with a door has 1 closed room', buildPlan(mk(false), new Set(), {}).rooms.length === 1);
       ok('plan: a column taller than the walls does not open the doors (still 1 room)', buildPlan(mk(true), new Set(), {}).rooms.length === 1);
+      {   // 270 cm walls with a window whose head is 255 cm: only 15 cm under the top
+        const k = require('./scene-kit').createScene(), C = [200, 200, 200, 255];
+        k.box('/Floor', C, -10, -10, -4, 410, 360, 0);
+        k.wall('/West', C, [-10, -10, 0, 360], 270); k.wall('/North', C, [0, 350, 400, 360], 270); k.wall('/South', C, [-10, -10, 410, 0], 270);
+        k.wall('/East', C, [400, -10, 410, 360], 270, [{ from: 100, to: 250, head: 255 }]);
+        ok('plan: a window ending 15 cm under the wall top still leaves a closed room', buildPlan(JSON.parse(JSON.stringify({ items: k.items })), new Set(), {}).rooms.length === 1);
+      }
       const warn0 = console.warn; console.warn = () => {};
-      let threw = false, bp; try { bp = buildPlan(mk(false), new Set(), { rooms: [{ name: 'x' }, { name: 'ok', at: [200, 175] }] }); } catch { threw = true; }
+      let threw = false, bp; try { bp = buildPlan(mk(false), new Set(), { rooms: [{ name: 'x' }, { name: { x: 1 }, at: [200, 175] }, { name: 'ok', at: [200, 175] }] }); } catch { threw = true; }
       console.warn = warn0;
-      ok('plan: a "rooms" entry without "at" is skipped, the others still name their room', !threw && bp.rooms.length === 1 && bp.rooms[0].name === 'ok');
+      ok('plan: a "rooms" entry without "at" or with a non-text name is skipped, the others still name their room', !threw && bp.rooms.length === 1 && bp.rooms[0].name === 'ok');
     }
 
     section('helpers and skills');
@@ -168,11 +175,14 @@ function freePort() {
     fs.mkdirSync(path.join(fxDir, 'xss'), { recursive: true });
     fs.writeFileSync(path.join(fxDir, 'xss/scene.json'), fxScene([fxBox('/Room/<img src=x onerror=window.__xss=1>/Table')]));
     fs.writeFileSync(path.join(fxDir, 'xss/project.json'), JSON.stringify({ title: '<b>bold</b> title', description: '<i>x</i>', rooms: [{ name: 'no position' }] }));
+    fs.mkdirSync(path.join(fxDir, 'em'), { recursive: true });
+    fs.writeFileSync(path.join(fxDir, 'em/scene.json'), JSON.stringify({ units: 'inches', camera: { eye: [0, -120, 20], target: [0, 0, 10], up: [0, 0, 1], fov: 35 }, items: [
+      { n: '/Plain', c: [255, 200, 100, 255], box: [-30, -10, 0, -10, 10, 20] }, { n: '/Glow', c: [255, 200, 100, 255], em: 1, box: [10, -10, 0, 30, 10, 20] }] }));
     for (const n of ['a', 'b']) { fs.mkdirSync(path.join(fxDir, n), { recursive: true }); fs.copyFileSync(path.join(PROJECTS, ids[0], 'scene.json'), path.join(fxDir, n, 'scene.json')); }
     const fxPort = await freePort(), fxBase = `http://127.0.0.1:${fxPort}`;
     fxServer = spawn(process.execPath, [path.join(ROOT, 'server.js'), String(fxPort)], { cwd: ROOT, env: { ...process.env, PROJECTS_DIR: fxDir }, stdio: ['ignore', 'pipe', 'pipe'] });
     await new Promise((res, rej) => { fxServer.stdout.on('data', d => /Open http/.test(d) && res()); fxServer.on('exit', c => rej(new Error('fixture server exited ' + c))); setTimeout(() => rej(new Error('fixture server did not start')), 8000); });
-    ok('PROJECTS_DIR serves another folder (3 fixture projects)', (await (await fetch(fxBase + '/projects.json')).json()).length === 3);
+    ok('PROJECTS_DIR serves another folder (4 fixture projects)', (await (await fetch(fxBase + '/projects.json')).json()).length === 4);
 
     section('browser');
     let chromium; try { ({ chromium } = require('playwright-core')); } catch {}
@@ -240,6 +250,8 @@ function freePort() {
         await hl.close();
         const it = await open(`/${ids[0]}/?lang=it`); await loaded(it);
         ok('i18n: ?lang=it shows the toolbar in Italian', (await it.textContent('#fpbtn')) === 'Prima persona' && (await it.textContent('#planbtn')) === 'Pianta' && (await it.$eval('html', e => e.lang)) === 'it' && !it.errors.length, it.errors.join('; '));
+        const up = await open(`/${ids[0]}/?lang=IT`); await loaded(up);
+        ok('i18n: ?lang=IT (upper case) is understood', (await up.textContent('#fpbtn')) === 'Prima persona'); await up.close();
         const right = await it.$eval('#bar', e => e.getBoundingClientRect().right);
         ok('i18n: the Italian toolbar fits the window', right < 1300 - 8, 'right edge ' + Math.round(right));
         await it.click('#setBtn'); await it.click('#langrow button[data-lang="en"]'); await loaded(it);
@@ -249,8 +261,16 @@ function freePort() {
 
       {   // shortcuts, menus, groups, phones (read-only against the real projects)
         const p = await open(`/${ids[0]}/`); await loaded(p);
+        await p.keyboard.press('n'); const nightOn = await p.$eval('#nightbtn', e => e.classList.contains('active')); await p.keyboard.press('n');
+        ok('keys: plain N toggles Night (positive control) and the button says aria-pressed', nightOn && (await p.getAttribute('#nightbtn', 'aria-pressed')) === 'false');
         await p.keyboard.press('Control+n'); await p.keyboard.press('Meta+f');
         ok('keys: browser chords (Ctrl+N, Cmd+F) do not trigger viewer shortcuts', !(await p.$eval('#nightbtn', e => e.classList.contains('active'))) && !(await p.evaluate(() => window.fpState && window.fpState())));
+        {   // Shift + W flies faster in orbit mode: no errors, and the camera really moves (the URL keeps ?cam after the key is released)
+          const before = new URL(p.url()).searchParams.get('cam'), nErr = p.errors.length;
+          await p.keyboard.down('Shift'); await p.keyboard.down('w'); await p.waitForTimeout(500); await p.keyboard.up('w'); await p.keyboard.up('Shift'); await p.waitForTimeout(200);
+          const after = new URL(p.url()).searchParams.get('cam');
+          ok('keys: Shift + W moves the camera in orbit mode without errors', p.errors.length === nErr && !!after && after !== before, p.errors.slice(nErr).join('; '));
+        }
         await p.click('#camBtn'); await p.keyboard.press('Escape');
         ok('keys: Esc folds the camera dropdown', !(await p.isVisible('#views')));
         if (JSON.parse(fs.readFileSync(path.join(PROJECTS, ids[0], 'scene.json'), 'utf8')).groups?.some(g => g.on)) {
@@ -258,13 +278,18 @@ function freePort() {
           await p.reload({ waitUntil: 'networkidle' }); await loaded(p);
           ok('groups: "All off" survives a reload when the scene has default-on groups', (await p.textContent('#gbtn')) === 'Groups');
         }
-        await p.click('#gbtn'); const head = p.locator('#groups h4.cat').first(); await head.focus(); await p.keyboard.press('Enter');
+        await p.click('#gbtn');
+        if (await p.locator('#groups label input').count()) {
+          await p.locator('#groups label input').first().focus(); await p.keyboard.press('Space');
+          ok('groups: Space on a checkbox toggles the group and keeps the focus on it', (await p.evaluate(() => document.activeElement && document.activeElement.type)) === 'checkbox');
+        }
+        const head = p.locator('#groups h4.cat').first(); await head.focus(); await p.keyboard.press('Enter');
         ok('groups: a category header folds from the keyboard (aria-expanded)', (await p.locator('#groups h4.cat').first().getAttribute('aria-expanded')) === 'false');
         await p.close();
         for (const lang of ['en', 'it']) {
           const m = await open(`/${ids[0]}/?lang=${lang}`, 390, 844); await loaded(m); await m.click('#morebtn'); await m.waitForTimeout(300);
-          const right = await m.$$eval('#views button', bs => Math.max(...bs.map(b => b.getBoundingClientRect().right)));
-          ok(`mobile (390 px, ${lang}): every camera view button is inside the window`, right <= 390, 'rightmost edge ' + Math.round(right));
+          const box = await m.$$eval('#views button', bs => ({ n: bs.length, minW: Math.min(...bs.map(b => b.getBoundingClientRect().width)), right: Math.max(...bs.map(b => b.getBoundingClientRect().right)) }));
+          ok(`mobile (390 px, ${lang}): every camera view button is visible and inside the window`, box.n === 9 && box.minW > 20 && box.right <= 390, JSON.stringify(box));
           await m.close();
         }
       }
@@ -279,6 +304,16 @@ function freePort() {
         await x.click('#planbtn'); await x.waitForSelector('#plan');
         ok('plan: a project.json "rooms" entry without "at" does not break the Plan button', !x.errors.length, x.errors.join('; '));
         await x.close();
+      }
+
+      {   // night mode: an "em" item glows, a plain one does not (mean brightness of the pixels where each box is drawn)
+        const g = await open('/em/?night=1', 1300, 800, fxBase); await loaded(g); await g.waitForTimeout(800);
+        const helper = await browser.newPage();
+        const lum = async x => { const b64 = (await g.screenshot({ clip: { x: x - 8, y: 392, width: 16, height: 16 } })).toString('base64');
+          return helper.evaluate(async d => { const im = new Image(); im.src = 'data:image/png;base64,' + d; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const x = c.getContext('2d'); x.drawImage(im, 0, 0); const p = x.getImageData(0, 0, im.width, im.height).data; let s = 0; for (let i = 0; i < p.length; i += 4) s += p[i] + p[i + 1] + p[i + 2]; return s / (p.length / 4 * 3); }, b64); };
+        const plain = await lum(436), glow = await lum(864);
+        ok('night: an "em" item glows and a plain one stays dark', glow > plain + 40, `plain ${plain.toFixed(0)}, glow ${glow.toFixed(0)}`);
+        await helper.close(); await g.close();
       }
 
       {   // reload events reach only the viewers of the changed project (fixture copies: the real files are never touched)
