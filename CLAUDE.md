@@ -1,4 +1,4 @@
-# skp-watch
+# vibe-interiors
 
 Local live preview for models built in SketchUp through the SketchUp MCP (`mcp__sketchup__*`).
 A small Node server watches the scene files (`projects/<name>/scene.json`); the site lists the projects at `/` and a three.js page at `/<name>/` redraws the chosen one whenever its file changes.
@@ -37,7 +37,7 @@ Tell the user in one short line when you add something ("Annotato in CLAUDE.md: 
 
 ## Layout
 ```
-skp-watch/
+<repo>/
   server.js          dev server: project list, viewer, one SSE channel per project; watches projects/ and pushes "reload" events
   public/index.html  the project list (cards with thumbnail, fetches projects.json)
   public/viewer.html the viewer (three.js via importmap, served from node_modules/three), served at /<name>/
@@ -50,7 +50,7 @@ Current model: `projects/casa-costanza/` (`house.js` generates its `scene.json`)
 
 ### Run / stop
 ```bash
-cd ~/skp-watch && (nohup node server.js 4173 > server.log 2>&1 &)   # http://localhost:4173  (list)  ·  http://localhost:4173/casa-costanza/  (viewer)
+cd <repo> && (nohup node server.js 4173 > server.log 2>&1 &)   # http://localhost:4173  (list)  ·  http://localhost:4173/casa-costanza/  (viewer)
 pgrep -f "node server.js"            # is it running?
 pkill -f "node server.js"            # stop (do this before restarting after editing server.js)
 open http://localhost:4173
@@ -63,7 +63,7 @@ open http://localhost:4173
 ## Workflow for every model change
 1. Change the model with `mcp__sketchup__build_model`.
 2. Export the live model: call `session_state["dump_scene"]()` inside `build_model` and return it in `result` (code below).
-3. `Write` the JSON to `~/skp-watch/projects/<name>/scene.json` (valid JSON, a single object). The page reloads itself in about a second and keeps the user's orbit angle.
+3. `Write` the JSON to `<repo>/projects/<name>/scene.json` (valid JSON, a single object). The page reloads itself in about a second and keeps the user's orbit angle.
 4. Verify with a headless screenshot (see "Testing") and read the PNG.
 5. Only call `save_model` when the user asks for a `.skp`.
 
@@ -101,7 +101,7 @@ Outlines are `EdgesGeometry` with a 20° threshold; materials are `MeshStandardM
 - **The view survives a refresh through the URL**: a preset click writes `?view=<name>` (e.g. `?view=Iso+2`); any orbit/zoom writes `?cam=ex,ey,ez,tx,ty,tz,fov` (and clears `view`). On first load `?cam` wins, then `?view`, then the camera saved in `scene.json`. Scene reloads (file changes) never touch the camera. `history.replaceState` is used, so no history entries pile up. Open `http://localhost:4173/?view=Top` to start in a given view.
 - **Zoom**: keys `+` / `−`, mouse wheel and pinch (OrbitControls); the on-screen `+`/`−` buttons were removed on request (dolly toward the orbit target; clamped 5…4000 in).
 - **Keyboard fly**: `W/A/S/D` or arrow keys move camera+orbit target together on the floor plane (forward = view direction projected on XY), `Q`/`E` down/up, `Shift` = 3x faster (160 in/s base); the URL `?cam` is saved on key release. Dims therefore moved to key `M`.
-- **PNG** button (key `P`): saves the image currently on screen (raster, AO, or path tracer canvas: the WebGPU one is `#rtgpu`, the others `renderer.domElement`) as `skp-watch-YYYYMMDD-HHMMSS.png`, at the canvas pixel size, with no toolbar, labels or tooltip. It is requested with a flag and executed at the end of the animation-loop callback, right after the frame is drawn (a WebGL canvas has no `preserveDrawingBuffer`, so `drawImage` only works in the same task); in raster/AO mode the dimension lines are hidden for the copy. Verified on raster and AO; the path-tracer branches are not tested.
+- **PNG** button (key `P`): saves the image currently on screen (raster, AO, or path tracer canvas: the WebGPU one is `#rtgpu`, the others `renderer.domElement`) as `vibe-interiors-YYYYMMDD-HHMMSS.png`, at the canvas pixel size, with no toolbar, labels or tooltip. It is requested with a flag and executed at the end of the animation-loop callback, right after the frame is drawn (a WebGL canvas has no `preserveDrawingBuffer`, so `drawImage` only works in the same task); in raster/AO mode the dimension lines are hidden for the copy. Verified on raster and AO; the path-tracer branches are not tested.
 - **Plan** (button after `First person`, desktop only; code in `public/plan.mjs`, imported by the viewer as `../plan.mjs`): a full-screen vector sheet with only the walls seen from above and the interior measures of each closed room, printable (`Stampa` = browser print / Save as PDF, `@page` size and the SVG's physical size follow the paper, A4 or A3, orientation and standard scale 1:20…1:500 chosen to fit) and downloadable (SVG, PNG at 200 dpi; fonts inside the downloads are system ones). Esc closes it and the viewer shortcuts stay quiet while it is open. How: walls = `box` / `slab` items with no group (the fixed shell) that cross the 100 cm cut (doors and windows show as gaps), glass (alpha < 255) skipped, the implicit group `removed` drawn dashed and only while it is on; rooms = closed empty regions of a 1 cm grid cut at (top of the walls − 20 cm), where lintels close the openings, traced to a polygon, simplified (1.5 cm) and snapped (2.5 cm) to the exact wall coordinates; each side ≥ 30 cm is dimensioned (a rectangle only gets its width and depth) plus the net area; unnamed rooms under 0.8 m² are skipped. Names: `project.json` `"rooms": [{"name": "Camera", "at": [x, y]}]` (cm, a point inside the room; a point outside any closed room is warned about and ignored), otherwise "Stanza N" by area. Small rooms get smaller type and a one-line label. **Limits**: `faces` meshes (curved lintels, SketchUp-exported walls that are not boxes) are ignored, so such walls are missing and can leave rooms open (unverified on a scene exported from SketchUp); an open-plan area is one region (L shapes get every side); a vertical side dimension can touch the one-line label of a very low room.
 - **Settings** (gear icon `#setBtn`): a dropdown under the gear (outside the bar, stays open while toggling, folds on a click elsewhere or when the camera dropdown opens) holding `Dims`, the unit button, `Click to measure` and `AO`; their keys (M, U, K, O) still work. The gear sits right next to the camera icon. `Render`, `PNG`, `Night`, `First person` and `Plan` are grouped together (`#actions`, in that order). On phones the gear is hidden and Dims / unit / Click to measure are rows of the `Views ▾` menu (AO stays desktop-only).
 - **Dims** (key `M`): overall W/D/H of the whole model as dimension lines; **click an object** to dimension just that object (click again to clear); **hover** tooltip with name + size. **Unit button** (key `U`) cycles cm / in / m. **Click to measure** button (key `K`, on by default, kept in `localStorage`) turns click-to-dimension selection and the hover tooltip off/on together.
