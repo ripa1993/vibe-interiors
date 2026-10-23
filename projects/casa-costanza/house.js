@@ -58,6 +58,7 @@ defGroup('bovindo-salottino', 'Ala · salottino davanti al bovindo: tavolino ton
 defGroup('bovindo-salottino-1', 'Ala · salottino davanti al bovindo, variante con UNA poltrona', 'Ala in alto', 'salottino');
 defGroup('soggiorno-tv', 'Soggiorno · mobile TV + TV + pianta', 'Soggiorno', 'tv');
 defGroup('soggiorno-tv-est', 'Soggiorno · TV a est, parete attrezzata', 'Soggiorno', 'tv');   // varianti: una esclude l'altra
+defGroup('soggiorno-v2', 'Soggiorno · variante da piantina bozza A: divano 3 posti + tavolo ovale 150x90 con 6 sedie + mobile basso a est con TV appesa (al posto di divano, tavolo e TV: spegnerli)', 'Soggiorno');
 defGroup('cucina-v5', 'Cucina v5 · come la v3, penisola tondeggiante al posto del bancone a sud', 'Cucina', 'cucina');
 defGroup('cucina-v4', 'Cucina v4 · come la v3, frigo e trasversale scambiati', 'Cucina', 'cucina');
 defGroup('cucina-v3', 'Cucina v3 · come la v1, senza penisola', 'Cucina', 'cucina');
@@ -384,6 +385,7 @@ require('./cucina-v3.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v4.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./cucina-v5.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./soggiorno-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
+require('./soggiorno-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v1.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v2.js')({ box, tube, rbox, slab, group, n: yT0 });
 require('./divano-v3.js')({ box, tube, rbox, slab, group, n: yT0 });
